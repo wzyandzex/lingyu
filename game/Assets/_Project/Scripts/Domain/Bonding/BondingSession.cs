@@ -3,7 +3,10 @@ using Aetherion.Domain.Creatures;
 
 namespace Aetherion.Domain.Bonding
 {
-    /// <summary>Pure QuietFollow session. Zero random. Presentation feeds speed/distance/still.</summary>
+    /// <summary>
+    /// QuietFollow session. Forgiving Testing: score by time-in-phase alignment,
+    /// only hard-fail DESYNC on sustained sprint; end-of-phase miss just retries phase.
+    /// </summary>
     public sealed class BondingSession
     {
         public CreatureDefId TargetDefId { get; }
@@ -16,8 +19,14 @@ namespace Aetherion.Domain.Bonding
         public float ApproachProgress { get; private set; }
         public int TestingCorrect { get; private set; }
         public float PhaseTimer { get; private set; }
+        public float PhaseDuration { get; private set; }
+        public float PhaseAlignedTime { get; private set; }
         public float ResonanceTimer { get; private set; }
         public float RushTimer { get; private set; }
+
+        public float PhaseRemaining01 =>
+            PhaseDuration <= 0.001f ? 0f : Math.Max(0f, PhaseTimer / PhaseDuration);
+
         public bool IsTerminal =>
             State == BondingState.Success ||
             State == BondingState.Failed ||
@@ -28,10 +37,9 @@ namespace Aetherion.Domain.Bonding
             TargetDefId = targetDefId;
             State = BondingState.Reading;
             Phase = BondingPhase.Hold;
-            PhaseTimer = BondingThresholds.HoldPhaseSeconds;
+            BeginPhase(BondingPhase.Hold);
         }
 
-        /// <summary>Player discrete intents (confirm / cancel / observe).</summary>
         public void ApplyIntent(BondingIntent intent)
         {
             if (IsTerminal) return;
@@ -47,13 +55,10 @@ namespace Aetherion.Domain.Bonding
                 case BondingState.Reading:
                     if (intent == BondingIntent.HoldStill || intent == BondingIntent.Observe)
                     {
-                        ReadingProgress += 0.4f;
-                        Attune += 12f;
-                        if (ReadingProgress >= BondingThresholds.ReadingProgressNeeded &&
-                            Attune >= BondingThresholds.AttuneOk * 0.4f)
-                        {
+                        ReadingProgress += 0.5f;
+                        Attune += 15f;
+                        if (ReadingProgress >= BondingThresholds.ReadingProgressNeeded)
                             State = BondingState.Approaching;
-                        }
                     }
                     break;
 
@@ -67,7 +72,6 @@ namespace Aetherion.Domain.Bonding
             }
         }
 
-        /// <summary>Continuous evaluation from presentation each frame.</summary>
         public void Tick(float dt, float playerSpeed, float distanceToTarget, bool playerStill)
         {
             if (IsTerminal || dt <= 0f) return;
@@ -75,7 +79,7 @@ namespace Aetherion.Domain.Bonding
             if (playerSpeed > BondingThresholds.SoftSpeed)
                 RushTimer += dt;
             else
-                RushTimer = 0f;
+                RushTimer = Math.Max(0f, RushTimer - dt * 0.5f);
 
             switch (State)
             {
@@ -96,85 +100,72 @@ namespace Aetherion.Domain.Bonding
 
         private void TickReading(float playerSpeed, float distance)
         {
-            if (RushTimer >= BondingThresholds.RushSeconds ||
-                (distance < BondingThresholds.NearRadius && playerSpeed > BondingThresholds.SlowApproachMax))
-            {
+            // Only fail if really rushing into its face
+            if (RushTimer >= BondingThresholds.RushSeconds && distance < 3.5f)
                 Fail(BondingFailCode.TooFast);
-            }
         }
 
         private void TickApproaching(float dt, float playerSpeed, float distance, bool playerStill)
         {
-            if (distance < BondingThresholds.NearRadius && !playerStill)
+            if (distance < BondingThresholds.NearRadius && playerSpeed > BondingThresholds.StillSpeedMax)
             {
                 Fail(BondingFailCode.Pressure);
                 return;
             }
 
-            if (RushTimer >= BondingThresholds.RushSeconds)
+            if (RushTimer >= BondingThresholds.RushSeconds && distance < 4f)
             {
                 Fail(BondingFailCode.TooFast);
                 return;
             }
 
-            // Gentle approach in comfort band earns progress
-            if (playerSpeed > 0.2f && playerSpeed <= BondingThresholds.SlowApproachMax &&
+            if (playerSpeed > 0.15f && playerSpeed <= BondingThresholds.SlowApproachMax &&
                 distance >= BondingThresholds.NearRadius)
             {
-                ApproachProgress += dt * 0.55f;
-                Attune += dt * 8f;
+                ApproachProgress += dt * 0.7f;
+                Attune += dt * 10f;
             }
 
-            if (playerStill && distance < BondingThresholds.ApproachComfortMin + 1.5f &&
-                distance >= BondingThresholds.NearRadius)
-            {
-                ApproachProgress += dt * 0.25f;
-            }
+            if (playerStill && distance < 4.5f && distance >= BondingThresholds.NearRadius)
+                ApproachProgress += dt * 0.35f;
 
             if (ApproachProgress >= BondingThresholds.ApproachProgressNeeded)
             {
                 State = BondingState.Testing;
                 TestingCorrect = 0;
-                Phase = BondingPhase.Walk;
-                PhaseTimer = BondingThresholds.WalkPhaseSeconds;
+                BeginPhase(BondingPhase.Walk);
             }
         }
 
         private void TickTesting(float dt, float playerSpeed, bool playerStill)
         {
-            var aligned = Phase == BondingPhase.Walk
-                ? playerSpeed > BondingThresholds.StillSpeedMax
-                : playerStill || playerSpeed <= BondingThresholds.StillSpeedMax;
-
-            if (!aligned && playerSpeed > BondingThresholds.SoftSpeed)
+            // Hard DESYNC only on sustained sprint
+            if (playerSpeed > BondingThresholds.SoftSpeed)
             {
-                Fail(BondingFailCode.Desync);
-                return;
-            }
-
-            // Mild misalignment doesn't instantly fail; severe reverse does
-            if (!aligned)
-            {
-                Guard += dt * 15f;
-                if (Guard >= BondingThresholds.FleeGuard)
+                RushTimer += dt;
+                if (RushTimer >= BondingThresholds.RushSeconds)
                 {
                     Fail(BondingFailCode.Desync);
                     return;
                 }
             }
-            else
-            {
-                Attune += dt * 6f;
-            }
+
+            var aligned = Phase == BondingPhase.Walk
+                ? playerSpeed > BondingThresholds.StillSpeedMax
+                : playerSpeed <= BondingThresholds.StillSpeedMax;
+
+            if (aligned)
+                PhaseAlignedTime += dt;
 
             PhaseTimer -= dt;
             if (PhaseTimer > 0f) return;
 
-            if (aligned)
+            var ratio = PhaseDuration <= 0.001f ? 0f : PhaseAlignedTime / PhaseDuration;
+            if (ratio >= BondingThresholds.PhaseAlignRatio)
             {
                 TestingCorrect++;
-                if (TestingCorrect >= BondingThresholds.TestingCorrectPhasesNeeded &&
-                    Attune >= BondingThresholds.AttuneOk)
+                Attune += 12f;
+                if (TestingCorrect >= BondingThresholds.TestingCorrectPhasesNeeded)
                 {
                     State = BondingState.ResonanceWindow;
                     ResonanceTimer = BondingThresholds.ResonanceWindowSeconds;
@@ -182,24 +173,9 @@ namespace Aetherion.Domain.Bonding
                     return;
                 }
             }
-            else
-            {
-                // End of phase misaligned — desync fail
-                Fail(BondingFailCode.Desync);
-                return;
-            }
+            // else: miss this beat — do NOT terminal fail; just next phase (forgiving)
 
-            // Advance metronome
-            if (Phase == BondingPhase.Walk)
-            {
-                Phase = BondingPhase.Hold;
-                PhaseTimer = BondingThresholds.HoldPhaseSeconds;
-            }
-            else
-            {
-                Phase = BondingPhase.Walk;
-                PhaseTimer = BondingThresholds.WalkPhaseSeconds;
-            }
+            BeginPhase(Phase == BondingPhase.Walk ? BondingPhase.Hold : BondingPhase.Walk);
         }
 
         private void TickResonance(float dt)
@@ -207,13 +183,21 @@ namespace Aetherion.Domain.Bonding
             ResonanceTimer -= dt;
             if (ResonanceTimer <= 0f)
             {
-                // Soft miss: return to testing, not full fail terminal
                 LastFailCode = BondingFailCode.WindowMiss;
                 State = BondingState.Testing;
                 TestingCorrect = Math.Max(0, TestingCorrect - 1);
-                Phase = BondingPhase.Hold;
-                PhaseTimer = BondingThresholds.HoldPhaseSeconds;
+                BeginPhase(BondingPhase.Hold);
             }
+        }
+
+        private void BeginPhase(BondingPhase phase)
+        {
+            Phase = phase;
+            PhaseDuration = phase == BondingPhase.Walk
+                ? BondingThresholds.WalkPhaseSeconds
+                : BondingThresholds.HoldPhaseSeconds;
+            PhaseTimer = PhaseDuration;
+            PhaseAlignedTime = 0f;
         }
 
         private void Fail(BondingFailCode code)

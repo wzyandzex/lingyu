@@ -4,13 +4,13 @@ using UnityEngine;
 
 namespace Aetherion.Presentation.UI
 {
-    /// <summary>Bonding HUD: stage line, Walk/Hold expectation, fail copy. No percentages.</summary>
+    /// <summary>Large, readable beat coaching. No percentages of attune/guard.</summary>
     public sealed class BondingHud : MonoBehaviour
     {
         private string _fail;
         private float _failUntil;
 
-        public void ShowFail(string humanText, float seconds = 2f)
+        public void ShowFail(string humanText, float seconds = 2.5f)
         {
             _fail = humanText ?? string.Empty;
             _failUntil = Time.unscaledTime + seconds;
@@ -19,47 +19,61 @@ namespace Aetherion.Presentation.UI
         private void OnGUI()
         {
             var session = GameBootstrap.Session?.World?.ActiveBonding;
-            if (session == null || session.IsTerminal)
-            {
-                if (!string.IsNullOrEmpty(_fail) && Time.unscaledTime <= _failUntil)
-                    DrawFail();
-                return;
-            }
-
             var boot = GameBootstrap.Instance;
             if (boot == null) return;
+
+            if (!string.IsNullOrEmpty(_fail) && Time.unscaledTime <= _failUntil)
+                DrawCenteredBox(Screen.height * 0.7f, 52, _fail, 18);
+
+            if (session == null || session.IsTerminal)
+                return;
 
             var stage = StageLabel(session.State, boot);
             var hint = StageHint(session.State, session.Phase, boot);
 
-            var box = new Rect(Screen.width * 0.5f - 280, 48, 560, session.State == BondingState.Testing ? 88 : 64);
-            GUI.Box(box, "");
-            GUI.Label(new Rect(box.x + 16, box.y + 10, box.width - 32, 24), stage);
-            GUI.Label(new Rect(box.x + 16, box.y + 34, box.width - 32, 24), hint);
+            // Top banner
+            DrawCenteredBox(40, 70, stage + "\n" + hint, 16);
 
             if (session.State == BondingState.Testing)
             {
                 var expect = session.Phase == BondingPhase.Walk
-                    ? boot.Localize("ui.bonding.expect.walk", "跟着走")
-                    : boot.Localize("ui.bonding.expect.hold", "停下");
-                GUI.Label(new Rect(box.x + 16, box.y + 56, box.width - 32, 24),
-                    ">>> " + expect + " <<<");
+                    ? "▶▶  现在：跟着走（按住 W）"
+                    : "■   现在：停下（松开 WASD）";
+                var colorNote = session.Phase == BondingPhase.Walk
+                    ? "雾衔在动 / 身体发亮绿"
+                    : "雾衔停住 / 颜色变浅";
+                var bar = Mathf.Clamp01(session.PhaseRemaining01);
+                DrawCenteredBox(120, 100,
+                    expect + "\n" + colorNote + "\n本拍剩余 " + bar.ToString("0.0") + " 秒 · 对了 " +
+                    session.TestingCorrect + "/" + BondingThresholds.TestingCorrectPhasesNeeded + " 拍",
+                    20);
             }
-
-            if (session.State == BondingState.ResonanceWindow)
+            else if (session.State == BondingState.ResonanceWindow)
             {
-                GUI.Label(new Rect(box.x + 16, box.y + 34, box.width - 32, 24),
-                    boot.Localize("ui.bonding.hint.confirm", "按 F 伸出掌心澄气"));
+                DrawCenteredBox(120, 64, "✨ 按  F  伸出掌心澄气（别冲）", 22);
             }
-
-            if (!string.IsNullOrEmpty(_fail) && Time.unscaledTime <= _failUntil)
-                DrawFail();
+            else if (session.State == BondingState.Reading)
+            {
+                DrawCenteredBox(120, 50, "先完全停下 1～2 秒", 18);
+            }
+            else if (session.State == BondingState.Approaching)
+            {
+                DrawCenteredBox(120, 50, "轻轻按住 W 走近，不要冲刺", 18);
+            }
         }
 
-        private void DrawFail()
+        private static void DrawCenteredBox(float y, float h, string text, int fontSize)
         {
-            var r = new Rect(Screen.width * 0.5f - 240, Screen.height * 0.72f, 480, 40);
-            GUI.Box(r, _fail);
+            var w = Mathf.Min(640, Screen.width - 24);
+            var rect = new Rect((Screen.width - w) * 0.5f, y, w, h);
+            var style = new GUIStyle(GUI.skin.box)
+            {
+                fontSize = fontSize,
+                alignment = TextAnchor.MiddleCenter,
+                wordWrap = true,
+                normal = { textColor = Color.white }
+            };
+            GUI.Box(rect, text, style);
         }
 
         private static string StageLabel(BondingState state, GameBootstrap boot)
@@ -67,13 +81,13 @@ namespace Aetherion.Presentation.UI
             switch (state)
             {
                 case BondingState.Reading:
-                    return boot.Localize("ui.bonding.step.reading", "观察 · 停步侧耳");
+                    return boot.Localize("ui.bonding.step.reading", "① 观察");
                 case BondingState.Approaching:
-                    return boot.Localize("ui.bonding.step.approaching", "缓缓靠近");
+                    return boot.Localize("ui.bonding.step.approaching", "② 缓近");
                 case BondingState.Testing:
-                    return boot.Localize("ui.bonding.step.testing", "静随 · 跟上节奏");
+                    return boot.Localize("ui.bonding.step.testing", "③ 静随节奏");
                 case BondingState.ResonanceWindow:
-                    return boot.Localize("ui.bonding.step.resonance", "共鸣时刻");
+                    return boot.Localize("ui.bonding.step.resonance", "④ 共鸣");
                 default:
                     return "结契";
             }
@@ -84,15 +98,15 @@ namespace Aetherion.Presentation.UI
             switch (state)
             {
                 case BondingState.Reading:
-                    return boot.Localize("ui.bonding.hint.reading", "先停住，听它呼吸");
+                    return "松开所有方向键，站着听";
                 case BondingState.Approaching:
-                    return boot.Localize("ui.bonding.hint.approaching", "慢慢走近，不要冲");
+                    return "慢慢靠近雾衔，保持距离别贴脸";
                 case BondingState.Testing:
                     return phase == BondingPhase.Walk
-                        ? boot.Localize("ui.bonding.hint.walk", "它在走 — 你也轻轻跟上")
-                        : boot.Localize("ui.bonding.hint.hold", "它停了 — 你也停下");
+                        ? "看雾衔：动了你就走，停了你就停"
+                        : "看雾衔：停住时你也停住";
                 case BondingState.ResonanceWindow:
-                    return boot.Localize("ui.bonding.hint.confirm", "按 F 伸出掌心澄气");
+                    return "窗口只有几秒 — 按 F";
                 default:
                     return "";
             }
