@@ -2,7 +2,7 @@
 
 > 日期：2026-07-21  
 > 设计包：`VS1-design.md`（审查修订后已批准）  
-> 阶段：**待验收**
+> 阶段：**已通过基线**（用户验收 2026-07-21）
 
 ## 做了什么
 - Domain：`CodexLayer` / `CodexProgress` + `CodexProgressTests`
@@ -25,5 +25,8 @@
 | F5/F9 | 目击保持 |
 | validate | `python tools/validate_data.py` OK |
 
-## 请回复
-- **「VS1 验收通过」** 或问题列表
+## 验收结论
+| 项 | 结果 |
+|---|---|
+| 用户验收 | **通过**（2026-07-21） |
+| 下一动作 | 宣告 VS2 结契设计门（Full）；未批准前不实现 |
