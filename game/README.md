@@ -1,79 +1,56 @@
 # Unity 工程（game/）— VS0 世界壳
 
 > 产品：澄界 / Aetherion  
-> 切片：VS0（已实现代码基线，待你本机 Play 验收）  
-> 引擎：Unity 6.x（见 `ProjectSettings/ProjectVersion.txt`，可按本机 Hub 版本调整）
+> 本机已检测到：**Unity 2022.3.62f3c1**（`ProjectVersion.txt`）  
+> 包版本已按 **2022.3 LTS** 对齐（勿用 Unity 6 专用 URP 17）
 
 ---
 
-## 首次打开
+## 若进入 Safe Mode / 看不到场景（按这个恢复）
 
-1. 安装 **Unity Hub** + **Unity 6**（推荐与 `ProjectVersion.txt` 接近的 6000.x；若版本提示不匹配，用本机已装 6.x 打开并允许升级/生成 lock）  
-2. Hub → **Add** → 选择本仓库下的 `game/` 目录  
-3. 等待 Package Manager 解析 `Packages/manifest.json`（Input System、URP、Test Framework 等）  
-4. 任意场景按 **Play**  
+1. **关闭 Unity**  
+2. 确认仓库已更新到最新（含本次修复）  
+3. 删除本机缓存（可选但推荐，包解析坏了时必做）：
+   - 删掉 `game/Library/` 整个文件夹（会再导入，几分钟）  
+   - 删掉 `game/Packages/packages-lock.json`（若存在）  
+4. 用 **Unity 2022.3.x** 通过 Hub 打开 `game/`  
+5. 若仍提示 Safe Mode：点 **Ignore** 或修编译错误后 **Exit Safe Mode**  
+6. 菜单 **Aetherion → VS0 → Open Boot Scene**  
+   或手动打开：`Assets/_Project/Scenes/Boot/Boot.unity`  
+7. 按 **Play**  
    - `AutoBootstrap` 会创建 `GameBootstrap`  
-   - 若无 Build Settings 场景，会调用 `RuntimeWorldBuilder` 生成 R01 灰盒  
+   - 运行时生成 R01 灰盒（地面 / 玩家 / 石碑 / HUD）  
+   - Hierarchy 里应出现 `R01_RuntimeRoot`  
 
-> 本机实现环境**未检测到 Unity CLI**，因此场景采用运行时灰盒，避免手写脆弱 `.unity` YAML。你在 Editor 中可另存 `Boot.unity` / `R01_Main.unity` 并加入 Build Settings。
+**原因说明（已修）**
+- 原先 `manifest` 写了 **URP 17**（仅 Unity 6），在 2022.3 上会解析失败 → Safe Mode  
+- 硬引用 **Input System** 程序集，包失败时脚本全红  
+- `FindFirstObjectByType` 在 2022.3 不可用  
+- 没有可打开的 `Boot.unity`，空场景看起来像“没有场景”
 
 ---
 
-## 操作（VS0）
+## 操作
 
-| 操作 | 默认 |
+| 操作 | 键 |
 |---|---|
-| 移动 | WASD / 方向键 |
-| 环视 | 按住 **鼠标右键** 移动鼠标 |
-| 交互 | **E**（靠近石碑时 HUD 提示） |
+| 移动 | WASD |
+| 环视 | 按住 **鼠标右键** + 移动 |
+| 交互 | **E**（靠近石碑） |
 | 保存 | **F5** |
 | 读档 | **F9** |
 
 ---
 
-## 架构落点
+## 数据
 
-| 程序集 | 路径 |
-|---|---|
-| `Aetherion.Domain` | `Assets/_Project/Scripts/Domain`（`noEngineReferences`） |
-| `Aetherion.Application` | `.../Application` |
-| `Aetherion.Infrastructure` | `.../Infrastructure` |
-| `Aetherion.Presentation` | `.../Presentation` |
-| `Aetherion.Tests` | `Assets/_Project/Tests/EditMode` |
-
-组合根：`GameBootstrap`  
-数据：Editor 读仓库根 `data/`；Player 读 `StreamingAssets/data/`  
-存档：`Application.persistentDataPath/saves/slot0.json`（含 `version`）
+- 权威：`../data/`（Editor 下优先）  
+- 构建副本：`Assets/StreamingAssets/data/`  
+- 校验（仓库根）：`python tools/validate_data.py`
 
 ---
 
-## 数据校验（仓库根）
+## 架构
 
-```bash
-python tools/validate_data.py
-```
-
-应输出 `validate_data: OK`。
-
----
-
-## EditMode 测试
-
-Unity → Window → General → Test Runner → EditMode → Run All  
-期望：`CreatureDefIdTests` 通过。
-
----
-
-## 手测清单（T0）
-
-对照 `docs/production/slices/VS0-design.md` B11：
-
-- [ ] Play 无报错刷屏  
-- [ ] 可移动；镜头跟随  
-- [ ] 靠近石碑有交互提示；E 出文案  
-- [ ] HUD 显示区域名  
-- [ ] F5 保存 / 移动后 F9 回到存档位置  
-- [ ] Console 出现 C001 / 雾衔 加载日志  
-- [ ] Domain 程序集无 Unity 引用（asmdef `noEngineReferences`）  
-
-完成后在 `docs/production/slices/STATUS.md` 标记验收结果。
+Domain / Application / Infrastructure / Presentation 程序集见 `Assets/_Project/Scripts/`。  
+Domain：`noEngineReferences: true`。

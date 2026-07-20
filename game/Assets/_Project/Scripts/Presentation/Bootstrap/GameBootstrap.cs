@@ -14,7 +14,8 @@ using UnityEngine.SceneManagement;
 namespace Aetherion.Presentation.Bootstrap
 {
     /// <summary>
-    /// Composition root. Lives on Boot scene (or auto-created by SceneBootstrap).
+    /// Composition root. Auto-created on Play if missing.
+    /// Compatible with Unity 2022.3 LTS (no Input System hard dependency).
     /// </summary>
     public sealed class GameBootstrap : MonoBehaviour
     {
@@ -30,6 +31,7 @@ namespace Aetherion.Presentation.Bootstrap
         private GameModeRouter _router;
         private HudController _hud;
         private string _statusMessage = string.Empty;
+        private bool _shellBuilt;
 
         private void Awake()
         {
@@ -71,7 +73,7 @@ namespace Aetherion.Presentation.Bootstrap
             else
             {
                 Debug.LogWarning("[Boot] C001 not found in catalog.");
-                _statusMessage = "C001 missing";
+                _statusMessage = "C001 missing — check data/creatures";
             }
         }
 
@@ -85,17 +87,18 @@ namespace Aetherion.Presentation.Bootstrap
         {
             _router?.Tick(Time.deltaTime);
 
-            if (KeyboardHotkeys.SavePressed())
+            if (Input.GetKeyDown(KeyCode.F5))
             {
                 PersistPlayerFromScene();
                 Session.Save(0);
                 PushPrompt(_l10n.Get("ui.prompt.save_done", "已保存"));
             }
 
-            if (KeyboardHotkeys.LoadPressed())
+            if (Input.GetKeyDown(KeyCode.F9))
             {
                 if (Session.TryContinue(0))
                 {
+                    EnsureWorldShell();
                     ApplyWorldToScene();
                     PushPrompt(_l10n.Get("ui.prompt.load_done", "已读取"));
                 }
@@ -110,7 +113,8 @@ namespace Aetherion.Presentation.Bootstrap
         {
             Session.StartNewGame("R01");
             _router.SwitchTo(GameModeId.Exploration);
-            EnsureR01Loaded();
+            EnsureWorldShell();
+            ApplyWorldToScene();
             PushPrompt(_l10n.Get("ui.prompt.new_game", "新的旅程开始"));
             if (!string.IsNullOrEmpty(_statusMessage))
                 PushPrompt(_statusMessage, 4f);
@@ -153,41 +157,44 @@ namespace Aetherion.Presentation.Bootstrap
                 Session.World.Flags["interacted_stone"] = true;
         }
 
-        private void EnsureR01Loaded()
+        private void EnsureWorldShell()
         {
-            var active = SceneManager.GetActiveScene().name;
-            if (active == r01SceneName)
+            // Always prefer runtime shell in VS0 so an empty scene still has content.
+            if (GameObject.Find("R01_RuntimeRoot") != null)
             {
-                ApplyWorldToScene();
+                _shellBuilt = true;
                 return;
             }
 
-            // Prefer additive load if scene is in build settings; else build runtime shell.
-            if (Application.CanStreamedLevelBeLoaded(r01SceneName))
+            if (Application.CanStreamedLevelBeLoaded(r01SceneName) &&
+                SceneManager.GetActiveScene().name != r01SceneName)
             {
-                SceneManager.LoadScene(r01SceneName, LoadSceneMode.Single);
-                // Apply after load via sceneLoaded
                 SceneManager.sceneLoaded -= OnSceneLoaded;
                 SceneManager.sceneLoaded += OnSceneLoaded;
+                SceneManager.LoadScene(r01SceneName, LoadSceneMode.Single);
+                return;
             }
-            else
-            {
-                Debug.LogWarning($"[Boot] Scene '{r01SceneName}' not in Build Settings. Building runtime R01 shell.");
-                RuntimeWorldBuilder.BuildR01Shell();
-                ApplyWorldToScene();
-            }
+
+            Debug.Log("[Boot] Building runtime R01 shell (greybox).");
+            RuntimeWorldBuilder.BuildR01Shell();
+            _shellBuilt = true;
         }
 
         private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
-            if (scene.name != r01SceneName) return;
             SceneManager.sceneLoaded -= OnSceneLoaded;
+            if (GameObject.Find("R01_RuntimeRoot") == null)
+            {
+                RuntimeWorldBuilder.BuildR01Shell();
+                _shellBuilt = true;
+            }
+
             ApplyWorldToScene();
         }
 
         private void PersistPlayerFromScene()
         {
-            var player = FindFirstObjectByType<PlayerMotor>();
+            var player = FindPlayerMotor();
             if (player == null || Session?.World == null) return;
             var t = player.transform;
             Session.World.Player.X = t.position.x;
@@ -198,33 +205,17 @@ namespace Aetherion.Presentation.Bootstrap
 
         private void ApplyWorldToScene()
         {
-            var player = FindFirstObjectByType<PlayerMotor>();
+            var player = FindPlayerMotor();
             if (player == null || Session?.World == null) return;
             var p = Session.World.Player;
-            player.Teleport(new Vector3(p.X, p.Y, p.Z), p.Yaw);
-        }
-    }
-
-    internal static class KeyboardHotkeys
-    {
-        public static bool SavePressed()
-        {
-#if ENABLE_INPUT_SYSTEM
-            return UnityEngine.InputSystem.Keyboard.current != null &&
-                   UnityEngine.InputSystem.Keyboard.current.f5Key.wasPressedThisFrame;
-#else
-            return Input.GetKeyDown(KeyCode.F5);
-#endif
+            // Default spawn if never moved
+            var pos = new Vector3(p.X, p.Y <= 0.01f ? 1f : p.Y, p.Z);
+            player.Teleport(pos, p.Yaw);
         }
 
-        public static bool LoadPressed()
+        private static PlayerMotor FindPlayerMotor()
         {
-#if ENABLE_INPUT_SYSTEM
-            return UnityEngine.InputSystem.Keyboard.current != null &&
-                   UnityEngine.InputSystem.Keyboard.current.f9Key.wasPressedThisFrame;
-#else
-            return Input.GetKeyDown(KeyCode.F9);
-#endif
+            return Object.FindObjectOfType<PlayerMotor>();
         }
     }
 }

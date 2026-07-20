@@ -1,9 +1,6 @@
 using Aetherion.Presentation.Bootstrap;
 using Aetherion.Presentation.UI;
 using UnityEngine;
-#if ENABLE_INPUT_SYSTEM
-using UnityEngine.InputSystem;
-#endif
 
 namespace Aetherion.Presentation.Interaction
 {
@@ -28,7 +25,7 @@ namespace Aetherion.Presentation.Interaction
             else if (hud != null)
                 hud.SetInteractHint(canInteract ? "交互 [E]" : string.Empty);
 
-            if (canInteract && InteractPressed())
+            if (canInteract && Input.GetKeyDown(KeyCode.E))
             {
                 if (GameBootstrap.Instance != null)
                     GameBootstrap.Instance.ShowInteractionText(_current.LocalizationKey);
@@ -53,17 +50,8 @@ namespace Aetherion.Presentation.Interaction
                     bestDist = d;
                 }
             }
-            return best;
-        }
 
-        private static bool InteractPressed()
-        {
-#if ENABLE_INPUT_SYSTEM
-            var kb = Keyboard.current;
-            return kb != null && kb.eKey.wasPressedThisFrame;
-#else
-            return Input.GetKeyDown(KeyCode.E);
-#endif
+            return best;
         }
     }
 }

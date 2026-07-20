@@ -4,8 +4,7 @@
   "references": [
     "Aetherion.Domain",
     "Aetherion.Application",
-    "Aetherion.Infrastructure",
-    "Unity.InputSystem"
+    "Aetherion.Infrastructure"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

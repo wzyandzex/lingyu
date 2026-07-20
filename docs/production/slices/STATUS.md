@@ -5,7 +5,7 @@
 
 | 切片 | 阶段 | 设计包 | 用户批准实现 | 实现 | 验收 | 备注 |
 |---|---|---|---|---|---|---|
-| VS0 世界壳 | **待验收** | [VS0-design.md](./VS0-design.md) | **已批准** | **已交付** | 未通过 | 报告：[VS0-implementation-report.md](./VS0-implementation-report.md)；请本机 Play |
+| VS0 世界壳 | **待验收** | [VS0-design.md](./VS0-design.md) | **已批准** | **已交付+热修** | 未通过 | 2022.3 Safe Mode 修复：包版本/输入/Boot 场景；见 game/README |
 | VS1 图志目击 | 锁定等待 | — | — | — | — | 依赖 VS0 验收 |
 | VS2 结契 | 锁定等待 | — | — | — | — | Full |
 | VS3 战斗 | 锁定等待 | — | — | — | — | Full |
