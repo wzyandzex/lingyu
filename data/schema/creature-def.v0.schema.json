@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lingyu.local/schema/creature-def-v0.json",
+  "title": "CreatureDef v0",
+  "description": "Aligned with VS0-design.md B5. Runtime authority under data/creatures/.",
+  "type": "object",
+  "required": ["id", "name_key", "aspect_primary", "regions"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^C[0-9]{3}$"
+    },
+    "name_key": { "type": "string" },
+    "aspect_primary": { "type": "string" },
+    "aspect_secondary": {
+      "type": ["string", "null"]
+    },
+    "size_class": { "type": "string" },
+    "discovery_tier": { "type": "string" },
+    "regions": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "base_stats": {
+      "type": "object",
+      "additionalProperties": { "type": "number" }
+    },
+    "skills": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "bonding": {
+      "type": "object",
+      "properties": {
+        "template": { "type": "string" }
+      }
+    },
+    "codex": {
+      "type": "object",
+      "properties": {
+        "science_key": { "type": "string" },
+        "poem_key": { "type": "string" }
+      }
+    },
+    "view_key": { "type": "string" }
+  },
+  "additionalProperties": true
+}

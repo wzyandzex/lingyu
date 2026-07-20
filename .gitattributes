@@ -1,0 +1,54 @@
+# Default
+* text=auto eol=lf
+
+# Explicit text
+*.md text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.csv text eol=lf
+*.txt text eol=lf
+*.cs text eol=lf
+*.shader text eol=lf
+*.hlsl text eol=lf
+*.compute text eol=lf
+*.asmdef text eol=lf
+*.inputactions text eol=lf
+*.uxml text eol=lf
+*.uss text eol=lf
+*.py text eol=lf
+*.sh text eol=lf
+*.gitignore text eol=lf
+*.gitattributes text eol=lf
+*.editorconfig text eol=lf
+
+# Unity YAML often needs merge care
+*.unity merge=unityyamlmerge diff
+*.prefab merge=unityyamlmerge diff
+*.asset merge=unityyamlmerge diff
+*.meta text eol=lf
+
+# Binary (enable Git LFS when assets land — see docs/production/git-and-repo-hygiene.md)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.tga binary
+*.psd binary
+*.tif binary
+*.tiff binary
+*.exr binary
+*.wav binary
+*.mp3 binary
+*.ogg binary
+*.aiff binary
+*.fbx binary
+*.blend binary
+*.ttf binary
+*.otf binary
+*.dll binary
+*.so binary
+*.dylib binary
+*.zip binary
+*.7z binary
+*.rar binary

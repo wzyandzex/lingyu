@@ -1,0 +1,12 @@
+{
+  "locale": "zh-Hans",
+  "entries": {
+    "creature.C000.name": "样例灵（占位）",
+    "creature.C000.codex.science": "数据管线校验用，非世界物种。",
+    "creature.C000.codex.poem": "无名之影，只为工造。",
+    "ui.hud.area.R01": "翠语林海",
+    "ui.hud.interact": "交互",
+    "ui.prompt.save_done": "已保存",
+    "ui.prompt.load_done": "已读取"
+  }
+}
