@@ -166,7 +166,8 @@ namespace Aetherion.Presentation.Bootstrap
                 return;
             }
 
-            if (Application.CanStreamedLevelBeLoaded(r01SceneName) &&
+            // Qualify: Aetherion.Application namespace shadows UnityEngine.Application.
+            if (UnityEngine.Application.CanStreamedLevelBeLoaded(r01SceneName) &&
                 SceneManager.GetActiveScene().name != r01SceneName)
             {
                 SceneManager.sceneLoaded -= OnSceneLoaded;

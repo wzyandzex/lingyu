@@ -17,7 +17,8 @@ namespace Aetherion.Infrastructure.Bootstrap
                     return p;
             }
 #endif
-            return Path.Combine(Application.streamingAssetsPath, "data", "creatures");
+            // Must qualify: project has namespace Aetherion.Application which shadows UnityEngine.Application.
+            return Path.Combine(UnityEngine.Application.streamingAssetsPath, "data", "creatures");
         }
 
         public static string GetL10nFilePath(string localeFileName = "zh-Hans.json")
@@ -31,19 +32,19 @@ namespace Aetherion.Infrastructure.Bootstrap
                     return p;
             }
 #endif
-            return Path.Combine(Application.streamingAssetsPath, "data", "l10n", localeFileName);
+            return Path.Combine(UnityEngine.Application.streamingAssetsPath, "data", "l10n", localeFileName);
         }
 
         public static string GetSaveDirectory()
         {
-            return Path.Combine(Application.persistentDataPath, "saves");
+            return Path.Combine(UnityEngine.Application.persistentDataPath, "saves");
         }
 
 #if UNITY_EDITOR
         private static string FindRepoRoot()
         {
             // game/ is Unity project root; repo root is parent of game/
-            var dataPath = Application.dataPath; // .../game/Assets
+            var dataPath = UnityEngine.Application.dataPath; // .../game/Assets
             var gameRoot = Directory.GetParent(dataPath)?.FullName;
             var repoRoot = Directory.GetParent(gameRoot ?? string.Empty)?.FullName;
             if (repoRoot != null && Directory.Exists(Path.Combine(repoRoot, "data")))
