@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Aetherion.Presentation.Camera
+namespace Aetherion.Presentation.Cameras
 {
     public sealed class SimpleFollowCamera : MonoBehaviour
     {

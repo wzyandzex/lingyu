@@ -1,4 +1,4 @@
-using Aetherion.Presentation.Camera;
+using Aetherion.Presentation.Cameras;
 using Aetherion.Presentation.Interaction;
 using Aetherion.Presentation.Player;
 using Aetherion.Presentation.UI;
@@ -56,11 +56,11 @@ namespace Aetherion.Presentation.Bootstrap
             controller.center = Vector3.up;
             player.AddComponent<PlayerMotor>();
 
-            // Camera
+            // Camera (must use UnityEngine.Camera — do not name a namespace Camera)
             var camGo = new GameObject("Main Camera");
             camGo.tag = "MainCamera";
             camGo.transform.SetParent(root.transform, false);
-            var cam = camGo.AddComponent<Camera>();
+            var cam = camGo.AddComponent<UnityEngine.Camera>();
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0.45f, 0.58f, 0.62f);
             cam.nearClipPlane = 0.1f;
