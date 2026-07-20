@@ -1,0 +1,17 @@
+{
+  "name": "Aetherion.Infrastructure",
+  "rootNamespace": "Aetherion.Infrastructure",
+  "references": [
+    "Aetherion.Domain",
+    "Aetherion.Application"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

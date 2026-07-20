@@ -1,0 +1,19 @@
+{
+  "name": "Aetherion.Presentation",
+  "rootNamespace": "Aetherion.Presentation",
+  "references": [
+    "Aetherion.Domain",
+    "Aetherion.Application",
+    "Aetherion.Infrastructure",
+    "Unity.InputSystem"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

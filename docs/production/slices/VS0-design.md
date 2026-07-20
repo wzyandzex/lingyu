@@ -1,6 +1,6 @@
 # VS0 设计包 — 世界壳（World Shell）
 
-> **状态**：Review（待用户批准实现）  
+> **状态**：Approved for Implement → **Implemented（待验收）**  
 > **剖面**：**Slim**（见 `docs/production/design-package-profiles.md`）  
 > **切片**：VS0  
 > **日期**：2026-07-20  
@@ -33,8 +33,8 @@
 - 试玩：`playtest-protocol.md` → VS0 仅 **T0 作者冒烟**  
 - R01 兴趣点：`R01-environmental-narrative.md`（VS0 只实装 ≥1 POI，推荐 `POI-R01-02` 青篱旧徽/石碑）  
 
-**当前阶段**：待用户确认  
-**建议**：审阅本设计包 → 回复「批准 VS0 实现」或提出修改意见。批准前不创建业务实现代码。
+**当前阶段**：实现已交付，待验收（见 `VS0-implementation-report.md`）  
+**实现许可**：用户已批准（2026-07-20）
 
 ---
 

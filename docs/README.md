@@ -68,6 +68,7 @@
 | [production/git-and-repo-hygiene.md](./production/git-and-repo-hygiene.md) | Git 与仓库卫生 |
 | [production/art-audio-placeholder.md](./production/art-audio-placeholder.md) | 美术音频 PH 规范 |
 | [production/preflight-checklist.md](./production/preflight-checklist.md) | 开工前检查 |
+| [production/studio-principles.md](./production/studio-principles.md) | Game Studios 理念映射（借 OS 不换宪法） |
 | [production/slices/STATUS.md](./production/slices/STATUS.md) | 切片状态板 |
 | [production/vertical-slice.md](./production/vertical-slice.md) | 体验切片定义 |
 | [production/roadmap.md](./production/roadmap.md) | 路线图 |
@@ -90,6 +91,7 @@
 | [ADR-008](./decisions/ADR-008-overall-architecture.md) | 总架构 |
 | [ADR-009](./decisions/ADR-009-slice-workflow.md) | 切片工作流 |
 | [ADR-010](./decisions/ADR-010-pre-implementation-workflow.md) | 开工前工作流补强 |
+| [ADR-011](./decisions/ADR-011-studio-os-borrow.md) | 借鉴 Game Studios OS（非整包） |
 
 ---
 

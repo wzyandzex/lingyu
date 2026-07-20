@@ -1,0 +1,17 @@
+{
+  "id": "C001",
+  "name_key": "creature.C001.name",
+  "aspect_primary": "tidal",
+  "aspect_secondary": "verdant",
+  "size_class": "S1",
+  "discovery_tier": "C",
+  "regions": ["R01"],
+  "base_stats": { "hp": 42, "atk": 10, "def": 12, "spa": 14, "spd": 11, "spe": 13 },
+  "skills": [],
+  "bonding": { "template": "quiet_follow" },
+  "codex": {
+    "science_key": "creature.C001.codex.science",
+    "poem_key": "creature.C001.codex.poem"
+  },
+  "view_key": "view.C001"
+}

@@ -1,0 +1,18 @@
+{
+  "id": "C000",
+  "name_key": "creature.C000.name",
+  "aspect_primary": "verdant",
+  "aspect_secondary": null,
+  "size_class": "S1",
+  "discovery_tier": "C",
+  "regions": ["R01"],
+  "base_stats": { "hp": 10, "atk": 1, "def": 1, "spa": 1, "spd": 1, "spe": 1 },
+  "skills": [],
+  "bonding": { "template": "none" },
+  "codex": {
+    "science_key": "creature.C000.codex.science",
+    "poem_key": "creature.C000.codex.poem"
+  },
+  "view_key": "view.C000",
+  "_comment": "Pipeline dummy only. VS0 also requires C001 sample per design package."
+}
