@@ -13,8 +13,8 @@
 | 项 | 状态 |
 |---|---|
 | 产品 / PRD / 架构 / 工作流 | 已锁定 |
-| **VS0 世界壳** | **实现已交付，待你本机 Play 验收** |
-| VS1+ | 锁定等待（VS0 验收通过后） |
+| **VS0 世界壳** | **已通过基线**（用户验收 2026-07-21） |
+| **下一焦点** | VS1 图志目击（须设计门 + 批准后实现） |
 
 设计包：[`docs/production/slices/VS0-design.md`](docs/production/slices/VS0-design.md)  
 状态板：[`docs/production/slices/STATUS.md`](docs/production/slices/STATUS.md)  
@@ -24,9 +24,10 @@
 
 ## 快速开始（运行 VS0）
 
-1. 用 Unity Hub 打开目录 **`game/`**（Unity 6.x）  
-2. 等待包解析完成后按 **Play**  
-3. 操作见 [`game/README.md`](game/README.md)
+1. 用 Unity Hub 打开 **`game/`**（本机实测 **Unity 2022.3 LTS**）  
+2. 打开 `Assets/_Project/Scenes/Boot/Boot.unity`  
+3. **Play** → Hierarchy 出现 `R01_RuntimeRoot`  
+4. 操作见 [`game/README.md`](game/README.md)
 
 ```bash
 # 仓库根：数据校验
@@ -56,7 +57,6 @@ python tools/validate_data.py
 - [`docs/README.md`](docs/README.md)  
 - [`docs/product/PRD-vertical-slice.md`](docs/product/PRD-vertical-slice.md)  
 - [`docs/production/slice-workflow.md`](docs/production/slice-workflow.md)  
-- [`docs/production/preflight-checklist.md`](docs/production/preflight-checklist.md)  
 
 ---
 

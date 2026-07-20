@@ -1,6 +1,6 @@
 # VS0 设计包 — 世界壳（World Shell）
 
-> **状态**：Approved for Implement → **Implemented（待验收）**  
+> **状态**：**Accepted Baseline**（用户验收通过 2026-07-21）  
 > **剖面**：**Slim**（见 `docs/production/design-package-profiles.md`）  
 > **切片**：VS0  
 > **日期**：2026-07-20  
