@@ -1,4 +1,4 @@
-using Aetherion.Domain.Creatures;
+using Aetherion.Presentation.Bonding;
 using Aetherion.Presentation.Cameras;
 using Aetherion.Presentation.Creatures;
 using Aetherion.Presentation.Interaction;
@@ -73,8 +73,7 @@ namespace Aetherion.Presentation.Bootstrap
             var stoneRenderer = stone.GetComponent<Renderer>();
             if (stoneRenderer != null)
                 stoneRenderer.material.color = new Color(0.55f, 0.52f, 0.45f);
-            var interactable = stone.AddComponent<Interactable>();
-            interactable.Configure("interact.stone.intro", 2.2f);
+            stone.AddComponent<Interactable>().Configure("interact.stone.intro", 2.2f);
 
             var hudGo = new GameObject("HUD");
             hudGo.transform.SetParent(root.transform, false);
@@ -82,13 +81,14 @@ namespace Aetherion.Presentation.Bootstrap
             if (GameBootstrap.Instance != null)
                 GameBootstrap.Instance.RegisterHud(hud);
 
-            var scanner = player.AddComponent<InteractionScanner>();
-            scanner.Configure(hud);
+            player.AddComponent<InteractionScanner>().Configure(hud);
 
-            // VS1: C002 moss crawler — flat, low, near spawn
             SpawnC002(root.transform, new Vector3(6f, 0.25f, 2f));
             SpawnC002(root.transform, new Vector3(-5f, 0.25f, 6f));
             SpawnC002(root.transform, new Vector3(3f, 0.25f, -7f));
+
+            // Single C001 bondable (sight + bond)
+            SpawnC001(root.transform, new Vector3(5.5f, 0.55f, 5f));
 
             var codexGo = new GameObject("CodexScreen");
             codexGo.transform.SetParent(root.transform, false);
@@ -96,7 +96,19 @@ namespace Aetherion.Presentation.Bootstrap
             if (GameBootstrap.Instance != null)
                 GameBootstrap.Instance.RegisterCodex(codex);
 
-            Debug.Log("[World] Runtime R01 shell + C002 wilds built.");
+            var partyGo = new GameObject("PartyScreen");
+            partyGo.transform.SetParent(root.transform, false);
+            var party = partyGo.AddComponent<PartyScreen>();
+            if (GameBootstrap.Instance != null)
+                GameBootstrap.Instance.RegisterParty(party);
+
+            var bondHudGo = new GameObject("BondingHud");
+            bondHudGo.transform.SetParent(root.transform, false);
+            var bondHud = bondHudGo.AddComponent<BondingHud>();
+            if (GameBootstrap.Instance != null)
+                GameBootstrap.Instance.RegisterBondingHud(bondHud);
+
+            Debug.Log("[World] R01 shell + C002 wilds + C001 bondable.");
         }
 
         private static void SpawnC002(Transform parent, Vector3 position)
@@ -105,14 +117,28 @@ namespace Aetherion.Presentation.Bootstrap
             go.name = "Wild_C002_Taixing";
             go.transform.SetParent(parent, false);
             go.transform.position = position;
-            // Flat, low silhouette (not a tall capsule)
             go.transform.localScale = new Vector3(1.4f, 0.45f, 1.1f);
             var rend = go.GetComponent<Renderer>();
             if (rend != null)
                 rend.material.color = new Color(0.28f, 0.48f, 0.30f);
+            go.AddComponent<WildCreatureView>().Configure("C002", 5f);
+        }
 
-            var view = go.AddComponent<WildCreatureView>();
-            view.Configure("C002", 5f);
+        private static void SpawnC001(Transform parent, Vector3 position)
+        {
+            // Small upright creature silhouette (not flat moss ball, not full player capsule)
+            var go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            go.name = "Bondable_C001_Wuxian";
+            go.transform.SetParent(parent, false);
+            go.transform.position = position;
+            go.transform.localScale = new Vector3(0.55f, 0.45f, 0.55f);
+            var rend = go.GetComponent<Renderer>();
+            if (rend != null)
+                rend.material.color = new Color(0.78f, 0.9f, 0.86f); // mist white-teal
+
+            go.AddComponent<WildCreatureView>().Configure("C001", 6f);
+            go.AddComponent<Interactable>().Configure(WuxianBondable.InteractKey, 2.4f);
+            go.AddComponent<WuxianBondable>();
         }
     }
 }

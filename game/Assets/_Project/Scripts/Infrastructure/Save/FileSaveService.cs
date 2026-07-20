@@ -17,7 +17,7 @@ namespace Aetherion.Infrastructure.Save
         public string areaId;
         public PlayerDto player;
         public FlagEntry[] flags;
-        public string[] party;
+        public PartyMemberDto[] party;
         public CodexSaveEntry[] codex;
     }
 
@@ -35,6 +35,13 @@ namespace Aetherion.Infrastructure.Save
     {
         public string key;
         public bool value;
+    }
+
+    [Serializable]
+    internal sealed class PartyMemberDto
+    {
+        public string instanceId;
+        public string defId;
     }
 
     [Serializable]
@@ -72,7 +79,7 @@ namespace Aetherion.Infrastructure.Save
                     z = snapshot.Player?.Z ?? 0f,
                     yaw = snapshot.Player?.Yaw ?? 0f
                 },
-                party = snapshot.Party ?? Array.Empty<string>(),
+                party = ToPartyArray(snapshot.Party),
                 flags = ToFlagArray(snapshot.Flags),
                 codex = ToCodexArray(snapshot.CodexEntries)
             };
@@ -84,7 +91,7 @@ namespace Aetherion.Infrastructure.Save
             if (File.Exists(path))
                 File.Delete(path);
             File.Move(temp, path);
-            Debug.Log($"[Save] Wrote slot {slot} v{dto.version} -> {path}");
+            Debug.Log($"[Save] Wrote slot {slot} v{dto.version} party={dto.party?.Length ?? 0} -> {path}");
         }
 
         public bool TryLoad(int slot, out WorldSessionSnapshot snapshot)
@@ -119,8 +126,8 @@ namespace Aetherion.Infrastructure.Save
                         Z = dto.player != null ? dto.player.z : 0f,
                         Yaw = dto.player != null ? dto.player.yaw : 0f
                     },
-                    Party = dto.party ?? Array.Empty<string>(),
                     Flags = FromFlagArray(dto.flags),
+                    Party = FromPartyArray(dto.party, dto.version),
                     CodexEntries = FromCodexArray(dto.codex)
                 };
                 return true;
@@ -155,6 +162,40 @@ namespace Aetherion.Infrastructure.Save
                     dict[e.key] = e.value;
             }
             return dict;
+        }
+
+        private static PartyMemberDto[] ToPartyArray(List<PartyMemberSnapshot> party)
+        {
+            if (party == null || party.Count == 0)
+                return Array.Empty<PartyMemberDto>();
+            var list = new List<PartyMemberDto>(party.Count);
+            foreach (var p in party)
+            {
+                if (p == null || string.IsNullOrEmpty(p.DefId)) continue;
+                list.Add(new PartyMemberDto
+                {
+                    instanceId = p.InstanceId ?? string.Empty,
+                    defId = p.DefId
+                });
+            }
+            return list.ToArray();
+        }
+
+        private static List<PartyMemberSnapshot> FromPartyArray(PartyMemberDto[] party, int version)
+        {
+            var list = new List<PartyMemberSnapshot>();
+            // v0/v1 had string[] or empty — JsonUtility won't map old strings into objects; empty is fine
+            if (version < 2 || party == null) return list;
+            foreach (var p in party)
+            {
+                if (p == null || string.IsNullOrEmpty(p.defId)) continue;
+                list.Add(new PartyMemberSnapshot
+                {
+                    InstanceId = p.instanceId,
+                    DefId = p.defId
+                });
+            }
+            return list;
         }
 
         private static CodexSaveEntry[] ToCodexArray(List<CodexEntryState> entries)

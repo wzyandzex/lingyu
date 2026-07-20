@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
+using Aetherion.Domain.Bonding;
 using Aetherion.Domain.Codex;
+using Aetherion.Domain.Creatures;
+using Aetherion.Domain.Party;
 
 namespace Aetherion.Application.Sessions
 {
@@ -17,12 +20,24 @@ namespace Aetherion.Application.Sessions
         public string AreaId { get; set; } = "R01";
         public PlayerState Player { get; } = new PlayerState();
         public Dictionary<string, bool> Flags { get; } = new Dictionary<string, bool>(StringComparer.Ordinal);
-
-        /// <summary>Single source of truth for codex unlocks (VS1+).</summary>
         public CodexProgress Codex { get; } = new CodexProgress();
+        public PartyState Party { get; } = new PartyState();
+
+        /// <summary>In-progress QuietFollow session; null when not bonding.</summary>
+        public BondingSession ActiveBonding { get; set; }
 
         public WorldSessionSnapshot ToSnapshot()
         {
+            var party = new List<PartyMemberSnapshot>();
+            foreach (var m in Party.Members)
+            {
+                party.Add(new PartyMemberSnapshot
+                {
+                    InstanceId = m.InstanceId,
+                    DefId = m.DefId.Value
+                });
+            }
+
             return new WorldSessionSnapshot
             {
                 Version = WorldSessionSnapshot.CurrentVersion,
@@ -36,7 +51,7 @@ namespace Aetherion.Application.Sessions
                     Yaw = Player.Yaw
                 },
                 Flags = new Dictionary<string, bool>(Flags),
-                Party = Array.Empty<string>(),
+                Party = party,
                 CodexEntries = Codex.ToEntries()
             };
         }
@@ -59,6 +74,20 @@ namespace Aetherion.Application.Sessions
             Codex.Clear();
             if (snapshot.CodexEntries != null)
                 Codex.LoadFrom(snapshot.CodexEntries);
+
+            Party.Clear();
+            if (snapshot.Party != null)
+            {
+                var list = new List<CreatureInstance>();
+                foreach (var p in snapshot.Party)
+                {
+                    if (p == null || string.IsNullOrEmpty(p.DefId)) continue;
+                    list.Add(new CreatureInstance(CreatureDefId.Parse(p.DefId), p.InstanceId));
+                }
+                Party.ReplaceAll(list);
+            }
+
+            ActiveBonding = null;
         }
     }
 
@@ -70,16 +99,22 @@ namespace Aetherion.Application.Sessions
         public float Yaw { get; set; }
     }
 
+    public sealed class PartyMemberSnapshot
+    {
+        public string InstanceId { get; set; }
+        public string DefId { get; set; }
+    }
+
     public sealed class WorldSessionSnapshot
     {
-        public const int CurrentVersion = 1;
+        public const int CurrentVersion = 2;
 
         public int Version { get; set; } = CurrentVersion;
         public string SavedAtUtc { get; set; } = string.Empty;
         public string AreaId { get; set; } = "R01";
         public PlayerSnapshot Player { get; set; } = new PlayerSnapshot();
         public Dictionary<string, bool> Flags { get; set; } = new Dictionary<string, bool>();
-        public string[] Party { get; set; } = Array.Empty<string>();
+        public List<PartyMemberSnapshot> Party { get; set; } = new List<PartyMemberSnapshot>();
         public List<CodexEntryState> CodexEntries { get; set; } = new List<CodexEntryState>();
     }
 }

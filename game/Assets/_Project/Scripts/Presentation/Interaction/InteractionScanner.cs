@@ -28,7 +28,7 @@ namespace Aetherion.Presentation.Interaction
             if (canInteract && Input.GetKeyDown(KeyCode.E))
             {
                 if (GameBootstrap.Instance != null)
-                    GameBootstrap.Instance.ShowInteractionText(_current.LocalizationKey);
+                    GameBootstrap.Instance.HandleInteract(_current.LocalizationKey);
                 else
                     Debug.Log($"[Interact] {_current.LocalizationKey}");
             }
