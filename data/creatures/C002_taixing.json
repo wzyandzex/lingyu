@@ -1,0 +1,17 @@
+{
+  "id": "C002",
+  "name_key": "creature.C002.name",
+  "aspect_primary": "verdant",
+  "aspect_secondary": "mycel",
+  "size_class": "S1",
+  "discovery_tier": "C",
+  "regions": ["R01"],
+  "base_stats": { "hp": 48, "atk": 9, "def": 14, "spa": 8, "spd": 12, "spe": 9 },
+  "skills": [],
+  "bonding": { "template": "assist_trail" },
+  "codex": {
+    "science_key": "creature.C002.codex.science",
+    "poem_key": "creature.C002.codex.poem"
+  },
+  "view_key": "view.C002"
+}

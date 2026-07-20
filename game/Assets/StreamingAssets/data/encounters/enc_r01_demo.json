@@ -1,0 +1,7 @@
+{
+  "id": "enc_r01_demo",
+  "region": "R01",
+  "entries": [
+    { "def_id": "C002", "weight": 1.0 }
+  ]
+}

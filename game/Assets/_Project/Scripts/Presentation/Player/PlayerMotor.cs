@@ -12,6 +12,9 @@ namespace Aetherion.Presentation.Player
         private CharacterController _controller;
         private float _yaw;
         private float _verticalVelocity;
+        private bool _movementLocked;
+
+        public void SetMovementLocked(bool locked) => _movementLocked = locked;
 
         private void Awake()
         {
@@ -21,6 +24,16 @@ namespace Aetherion.Presentation.Player
 
         private void Update()
         {
+            if (_movementLocked)
+            {
+                // still apply gravity so character stays grounded
+                if (_controller.isGrounded && _verticalVelocity < 0f)
+                    _verticalVelocity = -2f;
+                _verticalVelocity += gravity * Time.deltaTime;
+                _controller.Move(Vector3.up * _verticalVelocity * Time.deltaTime);
+                return;
+            }
+
             var input = ReadMove();
             var look = ReadLook();
 

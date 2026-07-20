@@ -7,12 +7,21 @@
     "creature.C001.name": "雾衔",
     "creature.C001.codex.science": "低矮四足雾栖灵，晨间与薄雾活跃，以静默同步作为亲近信号。",
     "creature.C001.codex.poem": "衔雾而行，步停如潮息。",
+    "creature.C002.name": "苔行",
+    "creature.C002.codex.science": "苔行以腹足贴合湿润地表，背上共生苔毯能记录气味颗粒。巡林员常跟随苔行寻找盗猎者的旧路。",
+    "creature.C002.codex.poem": "路被它读过，才会重新长出青。",
     "ui.hud.area.R01": "翠语林海",
     "ui.hud.interact": "交互 [E]",
     "ui.prompt.save_done": "已保存",
     "ui.prompt.load_done": "已读取",
     "ui.prompt.new_game": "新的旅程开始",
     "ui.prompt.data_loaded": "图志数据已载入",
+    "ui.prompt.codex_updated": "图志记下一笔：{name}",
+    "ui.codex.title": "图志",
+    "ui.codex.unknown": "？？？",
+    "ui.codex.layer.appearance": "外观层",
+    "ui.codex.opened_hint": "C 图志",
+    "ui.codex.hint_key": "C / Esc 关闭 · ↑↓ 选择",
     "interact.stone.intro": "青篱旧徽静静立在苔径旁。石面上的纹路提醒你：人与灵曾立约守护这片林海。失谐的雾，正从更深处渗来……"
   }
 }

@@ -21,6 +21,20 @@ namespace Aetherion.Infrastructure.Bootstrap
             return Path.Combine(UnityEngine.Application.streamingAssetsPath, "data", "creatures");
         }
 
+        public static string GetEncountersDirectory()
+        {
+#if UNITY_EDITOR
+            var repo = FindRepoRoot();
+            if (repo != null)
+            {
+                var p = Path.Combine(repo, "data", "encounters");
+                if (Directory.Exists(p))
+                    return p;
+            }
+#endif
+            return Path.Combine(UnityEngine.Application.streamingAssetsPath, "data", "encounters");
+        }
+
         public static string GetL10nFilePath(string localeFileName = "zh-Hans.json")
         {
 #if UNITY_EDITOR

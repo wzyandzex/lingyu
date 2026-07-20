@@ -13,10 +13,6 @@ using UnityEngine.SceneManagement;
 
 namespace Aetherion.Presentation.Bootstrap
 {
-    /// <summary>
-    /// Composition root. Auto-created on Play if missing.
-    /// Compatible with Unity 2022.3 LTS (no Input System hard dependency).
-    /// </summary>
     public sealed class GameBootstrap : MonoBehaviour
     {
         public static GameBootstrap Instance { get; private set; }
@@ -30,8 +26,8 @@ namespace Aetherion.Presentation.Bootstrap
         private FileSaveService _save;
         private GameModeRouter _router;
         private HudController _hud;
+        private CodexScreen _codex;
         private string _statusMessage = string.Empty;
-        private bool _shellBuilt;
 
         private void Awake()
         {
@@ -45,7 +41,8 @@ namespace Aetherion.Presentation.Bootstrap
             DontDestroyOnLoad(gameObject);
 
             _catalog = new JsonDataCatalog();
-            _catalog.LoadFromDirectory(DataPathResolver.GetCreaturesDirectory());
+            _catalog.LoadCreatures(DataPathResolver.GetCreaturesDirectory());
+            _catalog.LoadEncounters(DataPathResolver.GetEncountersDirectory());
 
             _l10n = new JsonLocalization();
             _l10n.LoadFromSimpleJsonObject(DataPathResolver.GetL10nFilePath());
@@ -63,17 +60,17 @@ namespace Aetherion.Presentation.Bootstrap
             _router.Register(new StubMode(GameModeId.Dialogue, id => Debug.Log($"[Mode] Stub enter {id}")));
             _router.Register(new StubMode(GameModeId.Menu, id => Debug.Log($"[Mode] Stub enter {id}")));
 
-            var c001 = CreatureDefId.Parse("C001");
-            if (_catalog.TryGetCreature(c001, out var def))
+            var c002 = CreatureDefId.Parse("C002");
+            if (_catalog.TryGetCreature(c002, out var def))
             {
                 var name = _l10n.Get(def.NameKey, def.NameKey);
-                Debug.Log($"[Boot] Sample creature loaded: {def.Id} -> {name}");
+                Debug.Log($"[Boot] C002 loaded: {def.Id} -> {name}");
                 _statusMessage = _l10n.Get("ui.prompt.data_loaded", "图志数据已载入") + $" · {name}";
             }
             else
             {
-                Debug.LogWarning("[Boot] C001 not found in catalog.");
-                _statusMessage = "C001 missing — check data/creatures";
+                Debug.LogWarning("[Boot] C002 not found — VS1 content missing.");
+                _statusMessage = "C002 missing";
             }
         }
 
@@ -86,6 +83,12 @@ namespace Aetherion.Presentation.Bootstrap
         private void Update()
         {
             _router?.Tick(Time.deltaTime);
+
+            if (Input.GetKeyDown(KeyCode.C))
+            {
+                EnsureCodex();
+                _codex.Toggle();
+            }
 
             if (Input.GetKeyDown(KeyCode.F5))
             {
@@ -120,6 +123,21 @@ namespace Aetherion.Presentation.Bootstrap
                 PushPrompt(_statusMessage, 4f);
         }
 
+        public bool TryRegisterSighting(CreatureDefId defId)
+        {
+            if (Session?.World == null) return false;
+            var changed = Session.World.Codex.RegisterSighting(defId);
+            if (!changed) return false;
+
+            var name = defId.Value;
+            if (Session.DataCatalog != null && Session.DataCatalog.TryGetCreature(defId, out var def))
+                name = Localize(def.NameKey, defId.Value);
+
+            var template = Localize("ui.prompt.codex_updated", "图志记下一笔：{name}");
+            PushPrompt(template.Replace("{name}", name), 3.5f);
+            return true;
+        }
+
         public void RegisterHud(HudController hud)
         {
             _hud = hud;
@@ -127,8 +145,11 @@ namespace Aetherion.Presentation.Bootstrap
             {
                 _hud.SetAreaName(_l10n.Get("ui.hud.area.R01", "翠语林海"));
                 _hud.SetInteractHint(string.Empty);
+                _hud.SetCodexHint(_l10n.Get("ui.codex.opened_hint", "C 图志"));
             }
         }
+
+        public void RegisterCodex(CodexScreen codex) => _codex = codex;
 
         public void PushPrompt(string text, float seconds = 2.5f)
         {
@@ -157,16 +178,19 @@ namespace Aetherion.Presentation.Bootstrap
                 Session.World.Flags["interacted_stone"] = true;
         }
 
+        private void EnsureCodex()
+        {
+            if (_codex != null) return;
+            var go = new GameObject("CodexScreen");
+            DontDestroyOnLoad(go);
+            _codex = go.AddComponent<CodexScreen>();
+        }
+
         private void EnsureWorldShell()
         {
-            // Always prefer runtime shell in VS0 so an empty scene still has content.
             if (GameObject.Find("R01_RuntimeRoot") != null)
-            {
-                _shellBuilt = true;
                 return;
-            }
 
-            // Qualify: Aetherion.Application namespace shadows UnityEngine.Application.
             if (UnityEngine.Application.CanStreamedLevelBeLoaded(r01SceneName) &&
                 SceneManager.GetActiveScene().name != r01SceneName)
             {
@@ -178,18 +202,13 @@ namespace Aetherion.Presentation.Bootstrap
 
             Debug.Log("[Boot] Building runtime R01 shell (greybox).");
             RuntimeWorldBuilder.BuildR01Shell();
-            _shellBuilt = true;
         }
 
         private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
             SceneManager.sceneLoaded -= OnSceneLoaded;
             if (GameObject.Find("R01_RuntimeRoot") == null)
-            {
                 RuntimeWorldBuilder.BuildR01Shell();
-                _shellBuilt = true;
-            }
-
             ApplyWorldToScene();
         }
 
@@ -209,14 +228,10 @@ namespace Aetherion.Presentation.Bootstrap
             var player = FindPlayerMotor();
             if (player == null || Session?.World == null) return;
             var p = Session.World.Player;
-            // Default spawn if never moved
             var pos = new Vector3(p.X, p.Y <= 0.01f ? 1f : p.Y, p.Z);
             player.Teleport(pos, p.Yaw);
         }
 
-        private static PlayerMotor FindPlayerMotor()
-        {
-            return Object.FindObjectOfType<PlayerMotor>();
-        }
+        private static PlayerMotor FindPlayerMotor() => Object.FindObjectOfType<PlayerMotor>();
     }
 }

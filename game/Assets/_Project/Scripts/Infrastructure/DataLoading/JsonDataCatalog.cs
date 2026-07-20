@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Aetherion.Application.Ports;
 using Aetherion.Domain.Creatures;
+using Aetherion.Domain.Encounters;
 using UnityEngine;
 
 namespace Aetherion.Infrastructure.DataLoading
@@ -35,19 +37,32 @@ namespace Aetherion.Infrastructure.DataLoading
         public string poem_key;
     }
 
-    /// <summary>
-    /// Loads creature definitions from StreamingAssets/data (Player)
-    /// or repository data/ (Editor dual-mode).
-    /// Uses Unity JsonUtility for VS0 (field names use snake_case via DTO).
-    /// </summary>
+    [Serializable]
+    internal sealed class EncounterJsonDto
+    {
+        public string id;
+        public string region;
+        public EncounterEntryDto[] entries;
+    }
+
+    [Serializable]
+    internal sealed class EncounterEntryDto
+    {
+        public string def_id;
+        public float weight;
+    }
+
     public sealed class JsonDataCatalog : IDataCatalog
     {
         private readonly Dictionary<string, CreatureDef> _creatures =
             new Dictionary<string, CreatureDef>(StringComparer.Ordinal);
+        private readonly Dictionary<string, EncounterTable> _encounters =
+            new Dictionary<string, EncounterTable>(StringComparer.Ordinal);
 
         public int CreatureCount => _creatures.Count;
+        public IEnumerable<CreatureDef> AllCreatures => _creatures.Values;
 
-        public void LoadFromDirectory(string creaturesDirectory)
+        public void LoadCreatures(string creaturesDirectory)
         {
             _creatures.Clear();
             if (string.IsNullOrEmpty(creaturesDirectory) || !Directory.Exists(creaturesDirectory))
@@ -77,11 +92,72 @@ namespace Aetherion.Infrastructure.DataLoading
                 }
             }
 
-            Debug.Log($"[DataCatalog] Loaded {_creatures.Count} creature definition(s) from {creaturesDirectory}");
+            Debug.Log($"[DataCatalog] Loaded {_creatures.Count} creature(s) from {creaturesDirectory}");
         }
+
+        public void LoadEncounters(string encountersDirectory)
+        {
+            _encounters.Clear();
+            if (string.IsNullOrEmpty(encountersDirectory) || !Directory.Exists(encountersDirectory))
+            {
+                Debug.LogWarning($"[DataCatalog] Encounters directory missing: {encountersDirectory}");
+                return;
+            }
+
+            foreach (var path in Directory.GetFiles(encountersDirectory, "*.json"))
+            {
+                try
+                {
+                    var json = File.ReadAllText(path);
+                    var dto = JsonUtility.FromJson<EncounterJsonDto>(json);
+                    if (dto == null || string.IsNullOrEmpty(dto.id))
+                        continue;
+
+                    var entries = new List<EncounterEntry>();
+                    if (dto.entries != null)
+                    {
+                        foreach (var e in dto.entries)
+                        {
+                            if (e == null || string.IsNullOrEmpty(e.def_id)) continue;
+                            entries.Add(new EncounterEntry
+                            {
+                                DefId = CreatureDefId.Parse(e.def_id),
+                                Weight = e.weight <= 0f ? 1f : e.weight
+                            });
+                        }
+                    }
+
+                    _encounters[dto.id] = new EncounterTable
+                    {
+                        Id = dto.id,
+                        Region = dto.region ?? string.Empty,
+                        Entries = entries
+                    };
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"[DataCatalog] Failed encounter {path}: {ex.Message}");
+                }
+            }
+
+            Debug.Log($"[DataCatalog] Loaded {_encounters.Count} encounter table(s)");
+        }
+
+        // Back-compat name used by VS0 boot
+        public void LoadFromDirectory(string creaturesDirectory) => LoadCreatures(creaturesDirectory);
 
         public bool TryGetCreature(CreatureDefId id, out CreatureDef def) =>
             _creatures.TryGetValue(id.Value, out def);
+
+        public IEnumerable<CreatureDef> CreaturesInRegion(string regionId)
+        {
+            if (string.IsNullOrEmpty(regionId))
+                return Array.Empty<CreatureDef>();
+            return _creatures.Values.Where(c => c.Regions != null && c.Regions.Contains(regionId));
+        }
+
+        public bool TryGetEncounterTable(string id, out EncounterTable table) =>
+            _encounters.TryGetValue(id, out table);
 
         private static CreatureDef ToDef(CreatureJsonDto dto)
         {

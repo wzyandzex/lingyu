@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Aetherion.Domain.Codex;
 
 namespace Aetherion.Application.Sessions
 {
@@ -17,6 +18,9 @@ namespace Aetherion.Application.Sessions
         public PlayerState Player { get; } = new PlayerState();
         public Dictionary<string, bool> Flags { get; } = new Dictionary<string, bool>(StringComparer.Ordinal);
 
+        /// <summary>Single source of truth for codex unlocks (VS1+).</summary>
+        public CodexProgress Codex { get; } = new CodexProgress();
+
         public WorldSessionSnapshot ToSnapshot()
         {
             return new WorldSessionSnapshot
@@ -33,7 +37,7 @@ namespace Aetherion.Application.Sessions
                 },
                 Flags = new Dictionary<string, bool>(Flags),
                 Party = Array.Empty<string>(),
-                Codex = new Dictionary<string, int>(StringComparer.Ordinal)
+                CodexEntries = Codex.ToEntries()
             };
         }
 
@@ -51,6 +55,10 @@ namespace Aetherion.Application.Sessions
                 foreach (var kv in snapshot.Flags)
                     Flags[kv.Key] = kv.Value;
             }
+
+            Codex.Clear();
+            if (snapshot.CodexEntries != null)
+                Codex.LoadFrom(snapshot.CodexEntries);
         }
     }
 
@@ -64,7 +72,7 @@ namespace Aetherion.Application.Sessions
 
     public sealed class WorldSessionSnapshot
     {
-        public const int CurrentVersion = 0;
+        public const int CurrentVersion = 1;
 
         public int Version { get; set; } = CurrentVersion;
         public string SavedAtUtc { get; set; } = string.Empty;
@@ -72,6 +80,6 @@ namespace Aetherion.Application.Sessions
         public PlayerSnapshot Player { get; set; } = new PlayerSnapshot();
         public Dictionary<string, bool> Flags { get; set; } = new Dictionary<string, bool>();
         public string[] Party { get; set; } = Array.Empty<string>();
-        public Dictionary<string, int> Codex { get; set; } = new Dictionary<string, int>();
+        public List<CodexEntryState> CodexEntries { get; set; } = new List<CodexEntryState>();
     }
 }

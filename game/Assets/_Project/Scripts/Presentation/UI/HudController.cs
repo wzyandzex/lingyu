@@ -10,12 +10,15 @@ namespace Aetherion.Presentation.UI
     {
         private string _areaName = "翠语林海";
         private string _interactHint = string.Empty;
+        private string _codexHint = "C 图志";
         private string _prompt = string.Empty;
         private float _promptUntil;
 
         public void SetAreaName(string name) => _areaName = name ?? string.Empty;
 
         public void SetInteractHint(string hint) => _interactHint = hint ?? string.Empty;
+
+        public void SetCodexHint(string hint) => _codexHint = hint ?? string.Empty;
 
         public void ShowPrompt(string text, float seconds = 2.5f)
         {
@@ -46,6 +49,8 @@ namespace Aetherion.Presentation.UI
             };
 
             GUI.Label(new Rect(pad, pad, 480, 32), _areaName, areaStyle);
+            if (!string.IsNullOrEmpty(_codexHint))
+                GUI.Label(new Rect(pad, pad + 28, 240, 24), _codexHint, hintStyle);
 
             if (!string.IsNullOrEmpty(_interactHint))
             {
