@@ -3,23 +3,17 @@
   "rootNamespace": "Aetherion.Tests",
   "references": [
     "Aetherion.Domain",
-    "Aetherion.Application",
-    "UnityEngine.TestRunner",
-    "UnityEditor.TestRunner"
+    "Aetherion.Application"
   ],
   "includePlatforms": [
     "Editor"
   ],
   "excludePlatforms": [],
   "allowUnsafeCode": false,
-  "overrideReferences": true,
-  "precompiledReferences": [
-    "nunit.framework.dll"
-  ],
+  "overrideReferences": false,
+  "precompiledReferences": [],
   "autoReferenced": false,
-  "defineConstraints": [
-    "UNITY_INCLUDE_TESTS"
-  ],
+  "defineConstraints": [],
   "versionDefines": [],
   "noEngineReferences": false,
   "optionalUnityReferences": [
