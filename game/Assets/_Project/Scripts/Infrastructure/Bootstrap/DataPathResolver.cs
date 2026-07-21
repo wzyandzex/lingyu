@@ -35,6 +35,34 @@ namespace Aetherion.Infrastructure.Bootstrap
             return Path.Combine(UnityEngine.Application.streamingAssetsPath, "data", "encounters");
         }
 
+        public static string GetSkillsDirectory()
+        {
+#if UNITY_EDITOR
+            var repo = FindRepoRoot();
+            if (repo != null)
+            {
+                var p = Path.Combine(repo, "data", "skills");
+                if (Directory.Exists(p))
+                    return p;
+            }
+#endif
+            return Path.Combine(UnityEngine.Application.streamingAssetsPath, "data", "skills");
+        }
+
+        public static string GetEnemiesDirectory()
+        {
+#if UNITY_EDITOR
+            var repo = FindRepoRoot();
+            if (repo != null)
+            {
+                var p = Path.Combine(repo, "data", "enemies");
+                if (Directory.Exists(p))
+                    return p;
+            }
+#endif
+            return Path.Combine(UnityEngine.Application.streamingAssetsPath, "data", "enemies");
+        }
+
         public static string GetL10nFilePath(string localeFileName = "zh-Hans.json")
         {
 #if UNITY_EDITOR

@@ -75,6 +75,17 @@ namespace Aetherion.Presentation.Bootstrap
                 stoneRenderer.material.color = new Color(0.55f, 0.52f, 0.45f);
             stone.AddComponent<Interactable>().Configure("interact.stone.intro", 2.2f);
 
+            // VS3 tutorial battle entrance
+            var rift = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            rift.name = "BattleEntrance_EmberRift";
+            rift.transform.SetParent(root.transform, false);
+            rift.transform.position = new Vector3(-3.5f, 0.4f, 4.5f);
+            rift.transform.localScale = new Vector3(1.2f, 0.4f, 1.2f);
+            var riftRend = rift.GetComponent<Renderer>();
+            if (riftRend != null)
+                riftRend.material.color = new Color(0.55f, 0.22f, 0.18f);
+            rift.AddComponent<Interactable>().Configure("interact.battle.tutorial", 2.5f);
+
             var hudGo = new GameObject("HUD");
             hudGo.transform.SetParent(root.transform, false);
             var hud = hudGo.AddComponent<HudController>();
@@ -108,7 +119,13 @@ namespace Aetherion.Presentation.Bootstrap
             if (GameBootstrap.Instance != null)
                 GameBootstrap.Instance.RegisterBondingHud(bondHud);
 
-            Debug.Log("[World] R01 shell + C002 wilds + C001 bondable.");
+            var battleHudGo = new GameObject("BattleHud");
+            battleHudGo.transform.SetParent(root.transform, false);
+            var battleHud = battleHudGo.AddComponent<BattleHud>();
+            if (GameBootstrap.Instance != null)
+                GameBootstrap.Instance.RegisterBattleHud(battleHud);
+
+            Debug.Log("[World] R01 shell + C002 + C001 + battle entrance.");
         }
 
         private static void SpawnC002(Transform parent, Vector3 position)

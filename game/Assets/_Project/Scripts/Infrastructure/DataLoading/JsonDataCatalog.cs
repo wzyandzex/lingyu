@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Aetherion.Application.Ports;
+using Aetherion.Domain.Battle;
 using Aetherion.Domain.Creatures;
 using Aetherion.Domain.Encounters;
 using UnityEngine;
@@ -19,9 +20,22 @@ namespace Aetherion.Infrastructure.DataLoading
         public string size_class;
         public string discovery_tier;
         public string[] regions;
+        public string[] skills;
+        public BaseStatsDto base_stats;
         public BondingDto bonding;
         public CodexDto codex;
         public string view_key;
+    }
+
+    [Serializable]
+    internal sealed class BaseStatsDto
+    {
+        public int hp;
+        public int atk;
+        public int def;
+        public int spa;
+        public int spd;
+        public int spe;
     }
 
     [Serializable]
@@ -52,47 +66,70 @@ namespace Aetherion.Infrastructure.DataLoading
         public float weight;
     }
 
+    [Serializable]
+    internal sealed class SkillJsonDto
+    {
+        public string id;
+        public string name_key;
+        public string element;
+        public int power;
+    }
+
     public sealed class JsonDataCatalog : IDataCatalog
     {
         private readonly Dictionary<string, CreatureDef> _creatures =
             new Dictionary<string, CreatureDef>(StringComparer.Ordinal);
+        private readonly Dictionary<string, CreatureDef> _enemies =
+            new Dictionary<string, CreatureDef>(StringComparer.Ordinal);
         private readonly Dictionary<string, EncounterTable> _encounters =
             new Dictionary<string, EncounterTable>(StringComparer.Ordinal);
+        private readonly Dictionary<string, SkillDef> _skills =
+            new Dictionary<string, SkillDef>(StringComparer.Ordinal);
 
         public int CreatureCount => _creatures.Count;
         public IEnumerable<CreatureDef> AllCreatures => _creatures.Values;
+        public IEnumerable<SkillDef> AllSkills => _skills.Values;
 
         public void LoadCreatures(string creaturesDirectory)
         {
             _creatures.Clear();
-            if (string.IsNullOrEmpty(creaturesDirectory) || !Directory.Exists(creaturesDirectory))
+            LoadCreatureFolder(creaturesDirectory, _creatures, "creature");
+        }
+
+        public void LoadEnemies(string enemiesDirectory)
+        {
+            _enemies.Clear();
+            LoadCreatureFolder(enemiesDirectory, _enemies, "enemy");
+        }
+
+        public void LoadSkills(string skillsDirectory)
+        {
+            _skills.Clear();
+            if (string.IsNullOrEmpty(skillsDirectory) || !Directory.Exists(skillsDirectory))
             {
-                Debug.LogWarning($"[DataCatalog] Creatures directory missing: {creaturesDirectory}");
+                Debug.LogWarning($"[DataCatalog] Skills directory missing: {skillsDirectory}");
                 return;
             }
-
-            foreach (var path in Directory.GetFiles(creaturesDirectory, "*.json"))
+            foreach (var path in Directory.GetFiles(skillsDirectory, "*.json"))
             {
                 try
                 {
-                    var json = File.ReadAllText(path);
-                    var dto = JsonUtility.FromJson<CreatureJsonDto>(json);
-                    if (dto == null || string.IsNullOrEmpty(dto.id))
+                    var dto = JsonUtility.FromJson<SkillJsonDto>(File.ReadAllText(path));
+                    if (dto == null || string.IsNullOrEmpty(dto.id)) continue;
+                    _skills[dto.id] = new SkillDef
                     {
-                        Debug.LogWarning($"[DataCatalog] Skip invalid creature file: {path}");
-                        continue;
-                    }
-
-                    var def = ToDef(dto);
-                    _creatures[def.Id.Value] = def;
+                        Id = dto.id,
+                        NameKey = dto.name_key ?? dto.id,
+                        Element = dto.element ?? string.Empty,
+                        Power = dto.power
+                    };
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogError($"[DataCatalog] Failed to load {path}: {ex.Message}");
+                    Debug.LogError($"[DataCatalog] Skill {path}: {ex.Message}");
                 }
             }
-
-            Debug.Log($"[DataCatalog] Loaded {_creatures.Count} creature(s) from {creaturesDirectory}");
+            Debug.Log($"[DataCatalog] Loaded {_skills.Count} skill(s)");
         }
 
         public void LoadEncounters(string encountersDirectory)
@@ -103,16 +140,12 @@ namespace Aetherion.Infrastructure.DataLoading
                 Debug.LogWarning($"[DataCatalog] Encounters directory missing: {encountersDirectory}");
                 return;
             }
-
             foreach (var path in Directory.GetFiles(encountersDirectory, "*.json"))
             {
                 try
                 {
-                    var json = File.ReadAllText(path);
-                    var dto = JsonUtility.FromJson<EncounterJsonDto>(json);
-                    if (dto == null || string.IsNullOrEmpty(dto.id))
-                        continue;
-
+                    var dto = JsonUtility.FromJson<EncounterJsonDto>(File.ReadAllText(path));
+                    if (dto == null || string.IsNullOrEmpty(dto.id)) continue;
                     var entries = new List<EncounterEntry>();
                     if (dto.entries != null)
                     {
@@ -126,7 +159,6 @@ namespace Aetherion.Infrastructure.DataLoading
                             });
                         }
                     }
-
                     _encounters[dto.id] = new EncounterTable
                     {
                         Id = dto.id,
@@ -136,18 +168,21 @@ namespace Aetherion.Infrastructure.DataLoading
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogError($"[DataCatalog] Failed encounter {path}: {ex.Message}");
+                    Debug.LogError($"[DataCatalog] Encounter {path}: {ex.Message}");
                 }
             }
-
-            Debug.Log($"[DataCatalog] Loaded {_encounters.Count} encounter table(s)");
         }
 
-        // Back-compat name used by VS0 boot
         public void LoadFromDirectory(string creaturesDirectory) => LoadCreatures(creaturesDirectory);
 
         public bool TryGetCreature(CreatureDefId id, out CreatureDef def) =>
             _creatures.TryGetValue(id.Value, out def);
+
+        public bool TryGetEnemy(string enemyId, out CreatureDef enemy) =>
+            _enemies.TryGetValue(enemyId, out enemy);
+
+        public bool TryGetSkill(string skillId, out SkillDef skill) =>
+            _skills.TryGetValue(skillId, out skill);
 
         public IEnumerable<CreatureDef> CreaturesInRegion(string regionId)
         {
@@ -158,6 +193,30 @@ namespace Aetherion.Infrastructure.DataLoading
 
         public bool TryGetEncounterTable(string id, out EncounterTable table) =>
             _encounters.TryGetValue(id, out table);
+
+        private static void LoadCreatureFolder(string dir, Dictionary<string, CreatureDef> map, string label)
+        {
+            if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir))
+            {
+                Debug.LogWarning($"[DataCatalog] {label} directory missing: {dir}");
+                return;
+            }
+            foreach (var path in Directory.GetFiles(dir, "*.json"))
+            {
+                try
+                {
+                    var dto = JsonUtility.FromJson<CreatureJsonDto>(File.ReadAllText(path));
+                    if (dto == null || string.IsNullOrEmpty(dto.id)) continue;
+                    var def = ToDef(dto);
+                    map[def.Id.Value] = def;
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"[DataCatalog] {label} {path}: {ex.Message}");
+                }
+            }
+            Debug.Log($"[DataCatalog] Loaded {map.Count} {label}(s) from {dir}");
+        }
 
         private static CreatureDef ToDef(CreatureJsonDto dto)
         {
@@ -170,10 +229,14 @@ namespace Aetherion.Infrastructure.DataLoading
                 SizeClass = dto.size_class ?? string.Empty,
                 DiscoveryTier = dto.discovery_tier ?? string.Empty,
                 Regions = dto.regions ?? Array.Empty<string>(),
+                SkillIds = dto.skills ?? Array.Empty<string>(),
                 BondingTemplate = dto.bonding != null ? dto.bonding.template ?? string.Empty : string.Empty,
                 ViewKey = dto.view_key ?? string.Empty,
                 CodexScienceKey = dto.codex != null ? dto.codex.science_key ?? string.Empty : string.Empty,
-                CodexPoemKey = dto.codex != null ? dto.codex.poem_key ?? string.Empty : string.Empty
+                CodexPoemKey = dto.codex != null ? dto.codex.poem_key ?? string.Empty : string.Empty,
+                BaseHp = dto.base_stats != null && dto.base_stats.hp > 0 ? dto.base_stats.hp : 40,
+                BaseAtk = dto.base_stats != null && dto.base_stats.atk > 0 ? dto.base_stats.atk : 10,
+                BaseDef = dto.base_stats != null && dto.base_stats.def > 0 ? dto.base_stats.def : 10
             };
         }
     }

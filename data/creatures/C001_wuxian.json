@@ -7,7 +7,7 @@
   "discovery_tier": "C",
   "regions": ["R01"],
   "base_stats": { "hp": 42, "atk": 10, "def": 12, "spa": 14, "spd": 11, "spe": 13 },
-  "skills": [],
+  "skills": ["sk_mist_veil", "sk_vine_whisper"],
   "bonding": { "template": "quiet_follow" },
   "codex": {
     "science_key": "creature.C001.codex.science",

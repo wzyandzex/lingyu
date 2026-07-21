@@ -14,6 +14,11 @@ namespace Aetherion.Domain.Codex
 
         public bool RegisterSighting(CreatureDefId defId)
         {
+            return UnlockLayer(defId, CodexLayer.Appearance);
+        }
+
+        public bool UnlockLayer(CreatureDefId defId, CodexLayer layer)
+        {
             if (string.IsNullOrEmpty(defId.Value))
                 return false;
 
@@ -23,7 +28,7 @@ namespace Aetherion.Domain.Codex
                 _layers[defId.Value] = set;
             }
 
-            return set.Add(CodexLayer.Appearance);
+            return set.Add(layer);
         }
 
         public bool IsUnlocked(CreatureDefId defId, CodexLayer layer)

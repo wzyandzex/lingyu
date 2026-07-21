@@ -1,7 +1,10 @@
+using System.Collections.Generic;
 using Aetherion.Application.Modes;
 using Aetherion.Application.Ports;
 using Aetherion.Application.Sessions;
 using Aetherion.Domain.Bonding;
+using Aetherion.Domain.Battle;
+using Aetherion.Domain.Codex;
 using Aetherion.Domain.Creatures;
 using Aetherion.Domain.Party;
 using Aetherion.Infrastructure.Bootstrap;
@@ -33,9 +36,13 @@ namespace Aetherion.Presentation.Bootstrap
         private CodexScreen _codex;
         private PartyScreen _party;
         private BondingHud _bondingHud;
+        private BattleHud _battleHud;
+        private BattleSimulator _activeBattle;
         private string _statusMessage = string.Empty;
         private Vector3 _lastPlayerPos;
         private float _playerSpeed;
+
+        public BattleSimulator ActiveBattle => _activeBattle;
 
         private void Awake()
         {
@@ -51,6 +58,8 @@ namespace Aetherion.Presentation.Bootstrap
             _catalog = new JsonDataCatalog();
             _catalog.LoadCreatures(DataPathResolver.GetCreaturesDirectory());
             _catalog.LoadEncounters(DataPathResolver.GetEncountersDirectory());
+            _catalog.LoadSkills(DataPathResolver.GetSkillsDirectory());
+            _catalog.LoadEnemies(DataPathResolver.GetEnemiesDirectory());
 
             _l10n = new JsonLocalization();
             _l10n.LoadFromSimpleJsonObject(DataPathResolver.GetL10nFilePath());
@@ -67,7 +76,9 @@ namespace Aetherion.Presentation.Bootstrap
                 onEnter: () => Debug.Log("[Mode] Bonding enter"),
                 onExit: () => Debug.Log("[Mode] Bonding exit"),
                 onTick: TickBondingMode));
-            _router.Register(new StubMode(GameModeId.Battle, id => Debug.Log($"[Mode] Stub enter {id}")));
+            _router.Register(new BattleMode(
+                onEnter: () => Debug.Log("[Mode] Battle enter"),
+                onExit: () => Debug.Log("[Mode] Battle exit")));
             _router.Register(new StubMode(GameModeId.Dialogue, id => Debug.Log($"[Mode] Stub enter {id}")));
             _router.Register(new StubMode(GameModeId.Menu, id => Debug.Log($"[Mode] Stub enter {id}")));
 
@@ -108,6 +119,20 @@ namespace Aetherion.Presentation.Bootstrap
                 }
             }
 
+            if (mode == GameModeId.Battle && _activeBattle != null &&
+                _activeBattle.Phase == BattlePhase.AwaitingPlayer &&
+                _activeBattle.Result == BattleResult.Ongoing)
+            {
+                if (Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.Keypad1))
+                    SubmitBattleSkillIndex(0);
+                if (Input.GetKeyDown(KeyCode.Alpha2) || Input.GetKeyDown(KeyCode.Keypad2))
+                    SubmitBattleSkillIndex(1);
+                if (Input.GetKeyDown(KeyCode.G))
+                    SubmitBattleGuard();
+                if (Input.GetKeyDown(KeyCode.R))
+                    SubmitBattleFlee();
+            }
+
             if (mode == GameModeId.Bonding)
             {
                 if (Input.GetKeyDown(KeyCode.F))
@@ -118,9 +143,16 @@ namespace Aetherion.Presentation.Bootstrap
 
             if (Input.GetKeyDown(KeyCode.F5))
             {
-                PersistPlayerFromScene();
-                Session.Save(0);
-                PushPrompt(_l10n.Get("ui.prompt.save_done", "已保存"));
+                if (mode == GameModeId.Battle)
+                {
+                    PushPrompt(Localize("battle.ui.no_save", "试炼中无法存档"));
+                }
+                else
+                {
+                    PersistPlayerFromScene();
+                    Session.Save(0);
+                    PushPrompt(_l10n.Get("ui.prompt.save_done", "已保存"));
+                }
             }
 
             if (Input.GetKeyDown(KeyCode.F9))
@@ -175,7 +207,166 @@ namespace Aetherion.Presentation.Bootstrap
                 return;
             }
 
+            if (locKey == "interact.battle.tutorial")
+            {
+                TryStartTutorialBattle();
+                return;
+            }
+
             ShowInteractionText(locKey);
+        }
+
+        public const string BattleEntranceKey = "interact.battle.tutorial";
+
+        public bool TryStartTutorialBattle()
+        {
+            if (Session?.World == null || _router == null) return false;
+            if (_router.CurrentId != GameModeId.Exploration) return false;
+            if (_activeBattle != null) return false;
+
+            if (_codex != null && _codex.IsOpen) _codex.Close();
+            if (_party != null && _party.IsOpen) _party.Close();
+
+            EnsurePlayerBattler();
+            if (Session.World.Party.Members.Count == 0)
+            {
+                PushPrompt(Localize("battle.msg.no_partner", "需要旅伴才能应战"));
+                return false;
+            }
+
+            var playerMember = Session.World.Party.Members[0];
+            if (!Session.DataCatalog.TryGetCreature(playerMember.DefId, out var playerDef))
+            {
+                PushPrompt("缺少伙伴数据");
+                return false;
+            }
+            if (!Session.DataCatalog.TryGetEnemy("E001", out var enemyDef))
+            {
+                PushPrompt("缺少敌方数据 E001");
+                return false;
+            }
+
+            var player = ToBattler(BattleSimulator.PlayerId, playerDef);
+            var enemy = ToBattler(BattleSimulator.EnemyId, enemyDef);
+            var skills = new List<SkillDef>();
+            foreach (var sk in Session.DataCatalog.AllSkills)
+                skills.Add(sk);
+
+            _activeBattle = new BattleSimulator(player, enemy, skills, BattleSimulator.WeatherFog);
+            var events = _activeBattle.Begin();
+            EnsureBattleHud();
+            _battleHud.ClearLog();
+            _battleHud.AppendEvents(events, this);
+            LockPlayerForBattle(true);
+            _router.SwitchTo(GameModeId.Battle);
+            return true;
+        }
+
+        public void SubmitBattleSkill(string skillId)
+        {
+            if (_activeBattle == null || _activeBattle.Phase != BattlePhase.AwaitingPlayer) return;
+            var events = _activeBattle.SubmitPlayerAction(new BattleAction
+            {
+                Type = BattleActionType.Skill,
+                SkillId = skillId
+            });
+            _battleHud?.AppendEvents(events, this);
+            if (_activeBattle.Result == BattleResult.PlayerWin)
+                OnBattleWon();
+        }
+
+        public void SubmitBattleSkillIndex(int index)
+        {
+            if (_activeBattle?.Player?.SkillIds == null) return;
+            if (index < 0 || index >= _activeBattle.Player.SkillIds.Count) return;
+            SubmitBattleSkill(_activeBattle.Player.SkillIds[index]);
+        }
+
+        public void SubmitBattleGuard()
+        {
+            if (_activeBattle == null || _activeBattle.Phase != BattlePhase.AwaitingPlayer) return;
+            var events = _activeBattle.SubmitPlayerAction(new BattleAction { Type = BattleActionType.Guard });
+            _battleHud?.AppendEvents(events, this);
+            if (_activeBattle.Result == BattleResult.PlayerLose)
+                { /* wait continue */ }
+        }
+
+        public void SubmitBattleFlee()
+        {
+            if (_activeBattle == null || _activeBattle.Phase != BattlePhase.AwaitingPlayer) return;
+            var events = _activeBattle.SubmitPlayerAction(new BattleAction { Type = BattleActionType.Flee });
+            _battleHud?.AppendEvents(events, this);
+        }
+
+        public void EndBattleReturnToExplore()
+        {
+            _activeBattle = null;
+            if (_battleHud != null)
+                _battleHud.ClearLog();
+            LockPlayerForBattle(false);
+            if (_router != null && _router.CurrentId == GameModeId.Battle)
+                _router.SwitchTo(GameModeId.Exploration);
+        }
+
+        private void OnBattleWon()
+        {
+            // First win: unlock C001 battle codex layer
+            if (Session?.World != null)
+            {
+                var c001 = CreatureDefId.Parse("C001");
+                // RegisterSighting only does Appearance; use progress API for battle layer via raw load
+                EnsureBattleCodexLayer(c001);
+                Session.World.Flags["tutorial_battle_won"] = true;
+            }
+        }
+
+        private void EnsureBattleCodexLayer(CreatureDefId id)
+        {
+            // Appearance first, then mark battle via flag-backed note if layer API limited
+            Session.World.Codex.RegisterSighting(id);
+            // Extend: use internal unlock by simulating entry — CodexProgress needs Unlock method
+            Session.World.Codex.UnlockLayer(id, CodexLayer.Battle);
+        }
+
+        private void EnsurePlayerBattler()
+        {
+            if (Session.World.Party.Members.Count > 0) return;
+            var trial = new CreatureInstance(CreatureDefId.Parse("C001"));
+            Session.World.Party.TryAdd(trial);
+            Session.World.Codex.RegisterSighting(CreatureDefId.Parse("C001"));
+            PushPrompt(Localize("battle.msg.trial_partner", "暂以旅伴雾衔应战"), 3f);
+        }
+
+        private static BattlerState ToBattler(string id, CreatureDef def)
+        {
+            return new BattlerState
+            {
+                Id = id,
+                DefId = def.Id.Value,
+                NameKey = def.NameKey,
+                PrimaryElement = def.AspectPrimary,
+                MaxHp = def.BaseHp,
+                Hp = def.BaseHp,
+                Atk = def.BaseAtk,
+                Def = def.BaseDef,
+                SkillIds = def.SkillIds ?? System.Array.Empty<string>()
+            };
+        }
+
+        private void LockPlayerForBattle(bool locked)
+        {
+            var motor = Object.FindObjectOfType<PlayerMotor>();
+            if (motor != null) motor.SetMovementLocked(locked);
+        }
+
+        public void RegisterBattleHud(BattleHud hud) => _battleHud = hud;
+
+        private void EnsureBattleHud()
+        {
+            if (_battleHud != null) return;
+            var go = new GameObject("BattleHud");
+            DontDestroyOnLoad(go);
+            _battleHud = go.AddComponent<BattleHud>();
         }
 
         public bool TryStartBonding(CreatureDefId defId)

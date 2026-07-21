@@ -1,0 +1,17 @@
+{
+  "id": "E001",
+  "name_key": "enemy.E001.name",
+  "aspect_primary": "pyric",
+  "aspect_secondary": null,
+  "size_class": "S0",
+  "discovery_tier": "C",
+  "regions": [],
+  "base_stats": { "hp": 40, "atk": 11, "def": 9, "spa": 8, "spd": 8, "spe": 10 },
+  "skills": ["sk_ember_nibble"],
+  "bonding": { "template": "none" },
+  "codex": {
+    "science_key": "enemy.E001.codex.science",
+    "poem_key": "enemy.E001.codex.poem"
+  },
+  "view_key": "view.E001"
+}
