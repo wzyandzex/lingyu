@@ -72,7 +72,8 @@ namespace Aetherion.Presentation.Bonding
             else
             {
                 transform.position = Vector3.Lerp(transform.position, _home, 1f - Mathf.Exp(-10f * Time.deltaTime));
-                transform.localScale = Vector3.Lerp(transform.localScale, _baseScale * new Vector3(1.05f, 0.85f, 1.05f),
+                var holdScale = Vector3.Scale(_baseScale, new Vector3(1.05f, 0.85f, 1.05f));
+                transform.localScale = Vector3.Lerp(transform.localScale, holdScale,
                     1f - Mathf.Exp(-8f * Time.deltaTime));
                 SetColor(new Color(0.85f, 0.88f, 0.95f)); // pale = STOP
             }
