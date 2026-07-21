@@ -13,9 +13,8 @@
 | 项 | 状态 |
 |---|---|
 | 产品 / PRD / 架构 / 工作流 | 已锁定 |
-| **VS0 世界壳** | **已通过基线**（2026-07-21） |
-| **VS1 图志目击** | **已通过基线**（2026-07-21） |
-| **下一焦点** | VS2 结契（须设计门 + 批准后实现） |
+| **VS0–VS2** | **已通过基线**（世界壳 / 图志目击 / 雾衔静随） |
+| **下一焦点** | VS3 战斗（须设计门 + 批准后实现） |
 
 设计包：[`docs/production/slices/VS0-design.md`](docs/production/slices/VS0-design.md)  
 状态板：[`docs/production/slices/STATUS.md`](docs/production/slices/STATUS.md)  

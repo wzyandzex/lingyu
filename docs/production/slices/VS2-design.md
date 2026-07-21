@@ -1,6 +1,6 @@
 # VS2 设计包 — 雾衔静随结契（First Resonance）
 
-> **状态**：**Approved for Implement**（多角色审查修订后用户批准 2026-07-21）  
+> **状态**：**Accepted Baseline**（用户验收通过 2026-07-21）  
 > **剖面**：**Full**  
 > **切片**：VS2  
 > **依赖**：VS0、VS1 已通过基线  
