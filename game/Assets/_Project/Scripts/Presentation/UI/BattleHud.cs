@@ -77,7 +77,7 @@ namespace Aetherion.Presentation.UI
                 var sid = skills[i];
                 var label = sid;
                 var preview = "";
-                if (boot.Session.DataCatalog.TryGetSkill(sid, out var sk))
+                if (GameBootstrap.Session.DataCatalog.TryGetSkill(sid, out var sk))
                 {
                     label = boot.Localize(sk.NameKey, sid) + " · " + sk.Element;
                     var mult = sim.PreviewMultiplier(sid);
@@ -128,7 +128,7 @@ namespace Aetherion.Presentation.UI
             {
                 if (a.ActionLabel == "guard") return boot.Localize("battle.msg.guard", "摆出守势");
                 if (a.ActionLabel == "flee") return boot.Localize("battle.msg.fled", "撤离试炼");
-                if (boot.Session.DataCatalog.TryGetSkill(a.ActionLabel, out var sk))
+                if (GameBootstrap.Session.DataCatalog.TryGetSkill(a.ActionLabel, out var sk))
                     return boot.Localize(sk.NameKey, a.ActionLabel);
                 return a.ActionLabel;
             }
