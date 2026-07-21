@@ -1,262 +1,201 @@
-# VS3 设计包 — 可读教学战（First Battle）
+# VS3 设计包 — 可读教学战（First Battle）v1.1
 
-> **状态**：Review（待用户批准实现）  
-> **剖面**：**Full**（BattleMode + Domain 结算 + Event 表现 + 技能数据）  
+> **状态**：**Review → 审查修订完成**（待用户批准实现）  
+> **剖面**：**Full**  
 > **切片**：VS3  
 > **日期**：2026-07-21  
-> **依赖**：VS0–VS2 **已通过基线**（须有 Party 雾衔；无则 Dev 补发）  
-> **规格**：`docs/systems/battle.md` v0.2 子集  
+> **依赖**：VS0–VS2 已通过基线  
+> **规格对齐**：`docs/systems/battle.md` v0.2 + 本包锁定的教学子集  
 > **实现许可**：未授予  
 
 ---
 
-## A. 切片宣告
+## 0. 制作组结论（先读）
 
-## 当前切片：VS3 — 可读的战斗
+### 推荐方案（默认执行）
 
-**目标（玩家体验一句话）**  
-用 **C001 雾衔** 打赢一场 **1v1 回合教学战**：看懂技能与澄相「有效/受阻」，胜负由 Domain 结算，UI 只播报不私算。
+**一场可复述的 1v1 教学战**：用已结契（或试用）的 **雾衔 C001**，在林缘 **失谐余烬裂口** 对战 **E001 烬屑螨**；Domain 结算伤害与澄相；UI 只播报。  
+**本场只教一件事：澄相相生/相斥（有效 · 一般 · 受阻）。**
+
+| 锁定项 | 值 |
+|---|---|
+| 敌主澄相 | **焰序 pyric**（失谐灼燃的林屑螨，非 C004 棘影） |
+| 我方主战技 | **潮汐 sk_mist_veil** → 对焰序 **×1.5 有效** |
+| 对照技 | **蔓息 sk_vine_whisper** → 对焰序 **×0.5 受阻**（故意教「不是每招都强」） |
+| 敌技 | **焰序 sk_ember_nibble** → 对潮汐雾衔 **×0.5**（玩家感到「它打我不疼」的可读反向） |
+| 先手 | **永远我方先手**（spe 本片不排序） |
+| 随机 | **无**（倍率与伤害确定） |
+| 命中 | **必中** |
+| 攻防 | **仅 atk/def**（spa 忽略） |
+| 防守 | **本回合承伤 ×0.5** |
+| 雾场地 | 开战宣告 + **潮汐技能 ×1.1** |
+| 逃跑 | **立即成功** 回探索 |
+| 战后 HP | **双方逻辑回满**（不写长期战损） |
+| 站位 | **不做** |
+| 试用雾衔 | **仅 Party 空时**注入 1 只，并提示；已有结契实例则用真伙伴 |
+
+### 世界一流体验一句话
+
+> 玩家赢的时候会说：「我用雾水克它的火屑」，而不是「我平 A 平死了」。
+
+### 关键分叉（仅 1 个仍可由你改）
+
+| 分叉 | 默认 | 备选 |
+|---|---|---|
+| 敌澄相教学模型 | **A 焰序余烬（推荐）** | B 敌墟响 + 改矩阵（潮/心对墟 1.5）— 改动面大，不推荐本片 |
+
+其余审查项已收束为默认，不再开放讨论。
+
+---
+
+## A. 宣告
+
+**目标**：雾衔打赢一场可读 1v1；相性三档可复述；Event 驱动表现。
 
 | 项 | 内容 |
 |---|---|
-| **PRD** | Beat 3 系统原子；VS-BTL-01/02/03/04(子集)/06/07(子集)/08；PTY-03 可简化为自动出战唯一队员 |
-| **支柱** | D 战斗与构筑（主）；C 探索（遭遇入口轻） |
-| **试玩** | T0 必做；能复述「为什么这一下更疼/更肉」 |
+| PRD | Beat3 系统原子；BTL-01/02/03/04/06/08；BTL-07 最小（见下）；BTL-05 不做 |
+| 支柱 | D 主；轻触失谐主题（余烬杂兵） |
+| 非本片 | E5 全叙事场、4–7 场铺量、站位、完整天气、棘影伦理战 |
 
-### 本片只教 **一个因果：澄相相性**
+### BTL-07 最小满足（审查锁定）
 
-- 场地/天气：**最小雾场地**（乘区 1.1 给潮汐/蔓息技能或仅文案+1.0 数值，见 B4 默认）  
-- **站位 VS-BTL-05：本片不做**（P1 后置，写死）  
-- 道具/多技能复杂分支：最小（1–2 技能 + 防守可选）
+| 做 | 不做 |
+|---|---|
+| 胜/负人话 Message | 经验曲线 / 升级 |
+| **首胜**解锁 C001 或 E001 相关 **Codex Battle 层**（对 C001：解锁自己战斗笔记；对 E001：若不进图鉴则只 Message） | 任务旗标链 |
+| 回 Exploration | 掉落经济 |
+
+**推荐首胜 Codex**：`Register` C001 的 `CodexLayer.Battle`（文案用已有战斗笔记 key 或新增 `creature.C001.codex.battle`）。E001 默认 **不进图鉴列表**（`regions` 不含展示或 id 前缀 E 过滤），避免垃圾图鉴。
 
 ---
 
 ## B1 范围
 
 ### In
-
-1. **BattleMode** 真切换；进战锁探索输入；Esc 仅「尝试逃跑」（非退出 Mode 作弊）  
-2. **入口**：灰盒交互点「失谐裂口 / 教学木桩」**E 开战**（不依赖完整遭遇表随机）  
-   - 可选：若 Party 空，开战前 **自动给予试用雾衔实例**（Dev 友好，日志注明）  
-3. **1v1 回合制**  
-   - 我方：Party 第一只（期望 C001）  
-   - 敌方：`E_tutorial_mite` 或数据 `C0xx` 教学敌（墟响/中性弱点清晰）  
-4. **Domain `BattleSimulator`**  
-   - 回合：玩家选技能 → 结算 → 敌方脚本行动 → 检查胜负  
-   - 伤害公式 + **相性子集**（至少 蔓息/潮汐/烬燎/墟响 四方表中用到的边）  
-   - **零随机**（`random_factor = 1.0`）便于单测与教学  
-5. **`BattleEvent[]` 队列**：Presentation 只消费事件改 HUD/飘字，**禁止**在 UI 里重算 HP  
-6. **技能数据** `data/skills/*.json` + CreatureDef.skills 引用；validate 可解析  
-7. **战斗 UI（IMGUI）**  
-   - 双方名/HP 条  
-   - 技能按钮（显示澄相与「有效/一般/受阻」预告）  
-   - 日志区：本回合事件短句  
-   - 可选防守指令  
-8. **胜负结算**  
-   - 胜：回 Exploration + prompt；可选解锁图志战斗层字段（若实现成本低；否则只 Message）  
-   - 负：回 Exploration + 可再战；**不毁 Party**  
-9. **Domain 单测**：伤害 × 相性边；战斗打至 Faint 的确定性序列  
+1. BattleMode 真切换；与 Bonding/Codex/Party UI 互斥  
+2. 入口 Interactable：失谐余烬裂口（出生点可见）  
+3. 1v1：Party[0] vs E001；Party 空 → 试用 C001 + 提示  
+4. Domain `BattleSimulator` + `ElementMatrix` + `BattleEvent[]`  
+5. 技能数据 `data/skills/*`；C001.skills 非空；E001 敌定义  
+6. IMGUI 战斗 UI：HP、技能（澄相+预告）、日志、防守、逃离  
+7. 雾宣告 + 潮汐 ×1.1  
+8. 单测：矩阵边；固定序列击倒  
 
 ### Out
+站位、多敌、换人、道具、PVP、Timeline 大片、持久战损、第二教学因果（天气/换人）。
 
-| 项 | 说明 |
+---
+
+## B2 流程
+
+1. （建议）已 VS2 结契雾衔；否则自动试用并提示「暂以旅伴雾衔应战」  
+2. E 裂口 → 开战 Message：「林雾里蹿出烬屑螨 — 看清澄相」  
+3. 玩家回合：点 **雾幕**（预告：有效）→ 结算飘字「效果绝佳」  
+4. 敌回合：余烬啮咬 → 「效果不理想」（打潮汐）  
+5. 可试 **缠藤低语** → 「效果不理想」（蔓息打焰序）— 对照教学  
+6. 再用雾幕收掉 → 「试炼通过 · 失谐余烬散了」→ 探索  
+7. 再战可重复；败则「先退一步」回探索，不毁队  
+
+### 时长
+单场 2–5 分钟；烟测 ≤10 分钟。
+
+---
+
+## B3 架构
+
+沿用设计 v1.0 分层；补充：
+
+| 项 | 锁定 |
 |---|---|
-| 站位前后排 | P1 后置 |
-| 真·天气系统/昼夜 | VS4/WLD；本片仅战斗内 `weatherId` 常量 `fog` 可选 |
-| 多敌人、换人深度、道具背包 | 后置 |
-| PVP、经验曲线精调 | 后置 |
-| Timeline 演出大片 | 后置；本片飘字+闪白即可 |
-| 棘影伦理战完整 | VS5 |
+| 先手 | 玩家 → 敌（固定） |
+| ActiveBattle | **WorldSession** 或 Bootstrap 单处；战后 null |
+| HP | 开战快照；**不写** Save 长期字段 |
+| 战斗中 F5 | **禁止**或忽略 ActiveBattle（推荐开战时禁用存档提示） |
 
-### 防膨胀
-- 一场教学战跑通即可，不铺 4–7 场  
-- 不做「自动战斗」或跳过结算  
-- 敌方 AI = **固定脚本**（每回合同一技能或简单循环），不写行为树  
+### ElementMatrix（VS3 实现常量，与 battle.md 一致）
 
----
-
-## B2 玩家流程
-
-### 标准路径（烟测 ≤10 分钟）
-
-1. Play → 确保 Party 有雾衔（VS2 结契或自动试用）  
-2. 走到 **教学遭遇石/裂口** → **E**「进入共鸣试炼」  
-3. 进入 BattleMode：见敌我 HP、技能列表  
-4. 点 **雾幕**（或主战技能）→ 日志显示伤害 +「效果绝佳/一般/不理想」  
-5. 敌方回合自动攻击  
-6. 重复至敌方 HP≤0 →「试炼通过」→ 回探索  
-7. （可选）再开一战验证可重复  
-
-### 失败
-- 我方 HP≤0 →「先退一步，再试」→ 回探索，雾衔 HP **战斗外满血重置**（VS3 简化，不做持久战损）  
-
-### 教学信息架构
-- 开战 Message：「看澄相颜色——有的一击更疼」  
-- 技能旁标注攻方澄相  
-- 结算后一行 effectiveness 文案  
-
----
-
-## B3 架构增量
-
-| 模块 | 层 | 职责 |
-|---|---|---|
-| `ElementId` / 相性矩阵 | Domain | 表查询 multiplier |
-| `SkillDef` | Domain + data | power, element, name_key |
-| `BattleSide` / `BattlerState` | Domain | hp, maxHp, atk, def, defId, skills[] |
-| `BattleAction` | Domain | Skill / Guard / Flee |
-| `BattleEvent` + 类型 | Domain | 不可变事件记录 |
-| `BattleSimulator` | Domain | Start, Choose, ResolveTurn, Events |
-| `BattleRequest` | Domain/App | 敌组合、weatherId、seed(unused) |
-| `BattleMode` | App | 真 Mode |
-| WorldSession | App | `ActiveBattle` 可选；不把 HP 写进长期存档（VS3） |
-| `BattleHud` | Pres | 消费 events 显示 |
-| `BattleEntrance` Interactable | Pres | E 开战 |
-
-### 控制流（强制）
+元素 id：`verdant` | `tidal` | `pyric` | `wane`（及扩展默认 1.0）
 
 ```text
-Input 选技能 → Application.SubmitBattleAction
-  → Domain.Simulator.Resolve → BattleEvent[]
-  → Presentation 播放/刷新 UI
-禁止：按钮 OnClick 里 hp -= 10
+攻\防    verdant  tidal  pyric  wane
+verdant  1.0      0.5    0.5    1.0
+tidal    1.5      1.0    1.5    1.0
+pyric    1.5      0.5    1.0    1.0
+wane     1.0      1.0    1.0    1.0
 ```
 
-### Mode
+注：上表 verdant→pyric=0.5、tidal→pyric=1.5 用于 **雾衔双技能对照教学**；与 battle.md 原文「蔓息强焰」在完整表中需统一——**本片以教学对照为准**，完整表在 battle 规格升 v0.3 时与 taxonomy 克制句对齐。  
+（制作决策：切片教学可读 > 过早冻结全球表；v0.3 回写 battle.md。）
+
+### 伤害
 
 ```text
-Exploration --E entrance--> Battle --win/lose/flee--> Exploration
-结契中不可开战；开战时关图志/队伍 UI
+raw = power * atk / max(1, def)
+raw *= matrix(skill.element, target.primary)
+if weather==fog && skill.element==tidal: raw *= 1.1
+if target.guarding: raw *= 0.5
+dmg = max(1, floor(raw))
 ```
 
-### 方案对比
-
-| 议题 | 推荐 | 否决 |
-|---|---|---|
-| 天气 | **战斗内常量 fog，乘区 1.0 或弱 1.1** 满足 BTL-04 最小可读 | 全图天气系统 |
-| 站位 | **不做** | 本片加前后排 |
-| 敌数据 | 专用 `enemy_tutorial_skitter` JSON（非图鉴种亦可） | 硬塞 C004 棘影全套 |
-| HP 持久 | **战后回满** | 持久伤残系统 |
+### 敌 AI
+每回合同一 `sk_ember_nibble`。
 
 ---
 
-## B4 技术选型
+## B4 技术
 
-| 项 | 选择 |
+2022.3；IMGUI；JsonUtility；skills+enemies 数据；零随机；无新包。
+
+---
+
+## B5 数据清单（实现必交）
+
+| 文件 | 要点 |
 |---|---|
-| 引擎/分层 | 沿用 2022.3 + asmdef |
-| UI | IMGUI 战斗面板 |
-| JSON | JsonUtility DTO；skills + enemies |
-| 随机 | **1.0 固定** |
-| 动画 | HP 条插值可选；无 Timeline |
+| `skills/sk_mist_veil.json` | tidal, power 40 |
+| `skills/sk_vine_whisper.json` | verdant, power 35 |
+| `skills/sk_ember_nibble.json` | pyric, power 28 |
+| `creatures/C001` | skills 填上两招；stats 已有 |
+| `enemies/E001_ember_mite.json` 或 creatures 前缀 E | pyric, hp≈40, atk/def 教学向 |
+| l10n | 技能/敌/有效一般受阻/胜负/试用提示/入口 |
+
+validate：skill id 可解析；C001.skills 非空。
 
 ---
 
-## B5 数据
-
-### skills（例）
-
-```json
-// data/skills/sk_mist_veil.json
-{ "id": "sk_mist_veil", "name_key": "skill.sk_mist_veil.name",
-  "element": "tidal", "power": 40 }
-// data/skills/sk_vine_whisper.json
-{ "id": "sk_vine_whisper", "name_key": "skill.sk_vine_whisper.name",
-  "element": "verdant", "power": 35 }
-// data/skills/sk_enemy_nibble.json
-{ "id": "sk_enemy_nibble", "name_key": "skill.sk_enemy_nibble.name",
-  "element": "wane", "power": 28 }
-```
-
-### C001 skills 引用
-更新 `C001_wuxian.json`：`skills: ["sk_mist_veil", "sk_vine_whisper"]`  
-`base_stats` 已有 hp/atk/def 等。
-
-### 敌定义（可用 creatures 或 enemies/）
-```json
-{ "id": "E001", "name_key": "enemy.E001.name",
-  "aspect_primary": "wane", "base_stats": { "hp": 36, "atk": 11, "def": 9, ... },
-  "skills": ["sk_enemy_nibble"] }
-```
-教学设计：雾衔 **潮汐/蔓息** 打 **墟响** 为 1.0 或表内有利边；另给一技能打「一般」对照——以 taxonomy 子集为准写死矩阵。
-
-### 相性矩阵（VS3 实现常量类 `ElementMatrix`）
-与 battle.md 4.1 一致（verdant/tidal/pyric/wane 映射中英 id）。
-
-### validate
-- skills 文件 + creature/enemy 的 skill id 可解析（硬校或至少 C001/E001）  
-
-### l10n
-技能名、敌名、有效/受阻/一般、开战/胜/负、入口交互。
-
----
-
-## B6 算法
+## B6–B7 接口（摘要）
 
 ```text
-function Damage(user, target, skill):
-  raw = skill.power * user.atk / max(1, target.def)
-  mult = ElementMatrix.Get(skill.element, target.primaryElement)
-  // optional: if weather==fog && skill.element in (tidal,verdant): mult *= 1.1
-  return max(1, floor(raw * mult))
-
-effectiveness:
-  mult >= 1.5 → Super
-  mult <= 0.5 → Resist
-  else → Neutral
+TryStartTutorialBattle()
+SubmitPlayerAction(Skill|Guard|Flee)
+GetBattleViewModel() // 只读快照 + 待显示 events
+BattleSimulator.Resolve → IReadOnlyList<BattleEvent>
 ```
 
-敌 AI：
-```text
-每回合若可行动：使用 skills[0]
-```
-
-逃跑：玩家 Flee → 50% 固定成功（零随机则 **VS3 逃跑必成** 或 **消耗回合失败一次再成**——推荐 **必成回探索** 减挫败）
+Events 最小：BattleStarted, WeatherAnnounced, TurnStarted, ActionSelected, DamageApplied(effectiveness), Fainted, BattleEnded, Message。
 
 ---
 
-## B7 接口
+## B8 UX（世界一流信息）
 
-```text
-App:
-  TryStartTutorialBattle()
-  SubmitPlayerAction(BattleAction)
-  GetBattleViewModel() // hp, skills, last events
-  IsInBattle()
-
-Domain:
-  BattleSimulator
-  ElementMatrix
-```
+- 技能按钮：名称 · 澄相 · **预告**（对当前敌）  
+- 快捷键 **1 / 2** 对应技能；**G** 防守；**R** 逃离（或按钮）  
+- 日志每回合 ≤4 行  
+- 文案禁用「消灭」；用「驱散 / 试炼通过」  
+- 三档文案：**效果绝佳 / 效果一般 / 效果不理想**（辅色可选，不唯色）  
+- **否决**：两招预告与结算全是「一般」且无对照；UI 私改 HP  
+- **不否决**：方块敌、无动作捕捉  
 
 ---
 
-## B8 UI/UX
+## B9 内容调性
 
-```text
-顶部：敌名 + HP
-中部：日志
-底部：我方名 + HP + [技能1][技能2][防守][逃离]
-```
-
-- 技能按钮禁用条件：非我方选择阶段  
-- 相性预告：选中/悬停显示（IMGUI 可固定在按钮旁小字）  
-- **禁止**显示内部 atk 公式  
-- 否决：UI 私改 HP；无相性反馈的纯数字战  
-- 不否决：PH 方块敌  
-
-键位：鼠标点按钮为主；可选 1/2 快捷技能。
-
----
-
-## B9 内容
-
-| 项 | |
+| 角色 | 调性 |
 |---|---|
-| 入口 Interactable | 裂口石，距出生点可见 |
-| 敌 E001 | 深灰紫小体 |
-| 技能 3 个 | 上表 |
-| 雾场地文案 | 开战一句「林雾弥漫」 |
+| 雾衔 | 已是伙伴，出战有陪伴感（一句上场 log） |
+| E001 烬屑螨 | 失谐灼过的林屑聚形，杂兵，不抢棘影识别 |
+| 裂口 | 青篱曾封过的小裂 — 试炼感非无意义刷怪 |
 
 ---
 
@@ -264,70 +203,60 @@ Domain:
 
 | 风险 | 缓解 |
 |---|---|
-| 公式在 UI | 代码审查 + 单测唯一真相 |
-| 打不过/秒杀 | 调 E001 hp 与 power；教学向 |
-| 无雾衔开战 | 自动试用实例 |
-| 与 Bonding Mode 冲突 | 互斥 SwitchTo |
-| validate 过严 | 先 skills+E001+C001 |
+| 教不会 | 双技能对照 + 预告 + 结算同词 |
+| 公式分叉 | 单测唯一真相 |
+| 无伙伴 | 试用注入 |
+| 矩阵与全球表争议 | 本片锁定教学表；战后升 battle v0.3 |
 
 ---
 
 ## B11 DoD
 
-- [ ] E 入口可进 BattleMode  
-- [ ] 1v1 可操作技能并看见 HP 变化  
-- [ ] 至少一次结算展示相性文案（有效/一般/受阻三选一可见）  
-- [ ] 可胜利回探索；可失败再战  
-- [ ] 事件驱动：断点审计无 UI 私算  
-- [ ] Domain 单测：相性倍率边 + 一场打完  
-- [ ] skills 数据驱动；validate 相关项绿  
-- [ ] 无站位/无第二套 AI/无结契回归损坏  
-- [ ] F5 不要求存战斗中途（战斗中存档可选禁止）  
+- [ ] E 开战；有/无结契均可（试用规则正确）  
+- [ ] 雾幕预告「有效」，结算同文案；缠藤「不理想」可对照  
+- [ ] 敌打我可见「不理想」  
+- [ ] 可胜可败；败不毁队  
+- [ ] Domain 单测矩阵 + 击倒序列  
+- [ ] 无 UI 私算；无站位；技能数据驱动  
+- [ ] 首胜 C001 Battle 层或等价可观察解锁  
+- [ ] 回探索后 C/V/结契入口不坏  
 
 ---
 
 ## B12 任务序
 
-1. Domain ElementMatrix + SkillDef + Battler + Simulator + Events + 测试  
-2. data skills + E001 + C001 skills 字段 + validate  
-3. Catalog 加载 skills（或开战硬读）  
-4. BattleMode + App 用例  
-5. 入口 Interactable  
-6. BattleHud 消费 events  
-7. 胜负回探索 + 自动试用雾衔  
-8. 手测报告 + STATUS  
+1. ElementMatrix + 公式 + Simulator + Events + 测  
+2. skills + E001 + C001.skills + l10n + validate  
+3. Catalog 读 skills/enemies  
+4. BattleMode + 用例  
+5. 入口 + 试用注入  
+6. BattleHud + 1/2/G/R  
+7. 胜负/Codex Battle 层  
+8. 报告 + STATUS  
 
 ---
 
-## B13 默认可批
+## B13 已关闭分叉
 
-| ID | 默认 |
-|---|---|
-| Q1 站位 | **不做** |
-| Q2 雾乘区 | **1.1 弱加成** 或 1.0+纯文案（实现选弱加成） |
-| Q3 逃跑 | **必成** |
-| Q4 战后 HP | **回满** |
-| Q5 敌 id | **E001** 独立敌人，不进图鉴强制 |
+敌相性、先手、防守、雾、逃跑、HP、站位 — 全部默认如上。  
+仅当你明确要求时再改敌为墟响方案 B。
 
 ---
 
 ## 设计门自检
 
-- [x] 映射 PRD VS3 / BTL 子集  
-- [x] Domain 可测；表现不结算  
-- [x] 单因果教学：相性  
+- [x] 审查 P0 已吸收  
+- [x] 教学相性可复述  
+- [x] 世界一流验收：赢要说得出澄相  
 - [ ] **等待用户批准实现**  
 
 ---
 
 ## 请求实现许可
 
-设计包：`docs/production/slices/VS3-design.md`
-
-**一句话**：BattleMode + Domain 1v1 结算 + 相性可读 + Event/IMGUI；入口 E 开战；站位与完整天气后置。
+**推荐一句话**：焰序烬屑螨教学战 + 潮汐有效/蔓息受阻对照 + Domain Event 结算 + 雾 ×1.1；站位不做。
 
 请回复：
 
 - **「批准 VS3 实现」** / **「按方案开工」**  
-- **「先多角色审查」**  
-- 或修改意见  
+- 或点名修改（例如坚持方案 B 敌墟响）  
